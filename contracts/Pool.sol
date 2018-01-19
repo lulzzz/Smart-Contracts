@@ -102,6 +102,8 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         // This code base has been removed and will be published at a later stage.
         // See release notes for further details.
         // *****************************************************
+        currentPoolDay++;
+        return 0;
     }
 
     /**@dev Function is called by the bond contract to submit a bond for signing
