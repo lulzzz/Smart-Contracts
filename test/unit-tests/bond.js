@@ -15,7 +15,7 @@ var td = require("../misc/testData.js");
 // event LogBond(bytes32 indexed bondHash, address indexed owner, bytes32 indexed info, uint timestamp, uint state);
 // ----------------
 
-// createBond(uint _principal_Fc, bytes32 _hashOfReferenceBond)
+// createBond(uint _principal_Cu, bytes32 _hashOfReferenceBond)
 exports.createBond = function(_bondPrincipal, _hashOfReferenceBond, _bondOwnerAccountIdx) {
     var bondHash;
     var finalBondYield = 0;
@@ -55,10 +55,10 @@ exports.createBond = function(_bondPrincipal, _hashOfReferenceBond, _bondOwnerAc
             // Calculate the final and expected pool yield
             td.b_yield_ppb = Math.max(setupI.MIN_YIELD_PPB, +td.b_yield_ppb - (2 * +yieldAvg));
 
-            // Adjust wc_bond_fc
-            td.wc_bond_fc = +td.wc_bond_fc - +_bondPrincipal;
-            // Adjust wc_transit_fc
-            td.wc_transit_fc = +td.wc_transit_fc + +_bondPrincipal;
+            // Adjust wc_bond_cu
+            td.wc_bond_cu = +td.wc_bond_cu - +_bondPrincipal;
+            // Adjust wc_transit_cu
+            td.wc_transit_cu = +td.wc_transit_cu + +_bondPrincipal;
             // Set the final bond state to 3
             finalBondState = 3;
             // Set the bond security reference hash
@@ -123,15 +123,15 @@ exports.createBond = function(_bondPrincipal, _hashOfReferenceBond, _bondOwnerAc
     .then(function(yieldInPool) {
         assert.equal(td.b_yield_ppb, yieldInPool.valueOf(), "The value for pool yield is incorrect");
         // Verify new value for wc bond
-        return td.pool.WC_Bond_Fc.call();
+        return td.pool.WC_Bond_Cu.call();
     })
     .then(function(wc_bond) {
-        assert.equal(td.wc_bond_fc, wc_bond.valueOf(), "The value for wc bond is incorrect");
+        assert.equal(td.wc_bond_cu, wc_bond.valueOf(), "The value for wc bond is incorrect");
         // Verify new value for wc transit
-        return td.pool.WC_Transit_Fc.call();
+        return td.pool.WC_Transit_Cu.call();
     })
     .then(function(wc_transit) {
-        assert.equal(td.wc_transit_fc, wc_transit.valueOf(), "The value for wc transit is incorrect");
+        assert.equal(td.wc_transit_cu, wc_transit.valueOf(), "The value for wc transit is incorrect");
     });
 }
 
@@ -146,12 +146,9 @@ exports.processMaturedBond = function(_bondHash) {
     var bondFinalState;
 
     // Get the payment advice details
-    return td.bank.paymentAdviceCountNextLast.call()
-    .then(function(paymentAdviceInfo) {
-        if (paymentAdviceInfo[0].valueOf() == 0)
-            nextBankPaymentAdvice = 0;
-        else nextBankPaymentAdvice = +paymentAdviceInfo[2].valueOf() + 1;
-
+    return td.bank.countPaymentAdviceEntries.call()
+    .then(function(count) {
+        nextBankPaymentAdvice = count.valueOf();
         // Retrieve the hash map info from the bond firstIdx, nextIdx, count
         return td.bond.hashMap.call();
     })
@@ -175,10 +172,10 @@ exports.processMaturedBond = function(_bondHash) {
             bondFinalState = 7;                 // Matured
         else bondFinalState = 6;                // Defaulted
 
-        // If bond is in signed state reduce wc_transit_fc by the expeced amount
+        // If bond is in signed state reduce wc_transit_cu by the expeced amount
         if (bondInitialState == 3) {
             //Transit -= Bond Principal - Bond Deposited amount;
-            td.wc_transit_fc -= +bData[3].valueOf();
+            td.wc_transit_cu -= +bData[3].valueOf();
         }
 
         // Get the details of the bond that was underwritten with this bond
@@ -191,8 +188,8 @@ exports.processMaturedBond = function(_bondHash) {
         if (securityReferenceBond != null)
             bondPayoutAmount -= ((+securityReferenceBond[3].valueOf() * +setupI.BOND_REQUIRED_SECURITY_REFERENCE_PPT) / Math.pow(10, 3));
 
-        // Adjust wc_bal_ba_fc
-        td.wc_bal_ba_fc -= +bondPayoutAmount;
+        // Adjust wc_bal_ba_cu
+        td.wc_bal_ba_cu -= +bondPayoutAmount;
         
         // Process matured bond
         return td.timer.manualPing(td.bond.address, 0, _bondHash, td.futureEpochTimeStamp, {from: td.accounts[0]});
@@ -213,7 +210,7 @@ exports.processMaturedBond = function(_bondHash) {
         }
         else {
             // If payout amount is 0 ensure no new payment advice entry has been created
-            return td.bank.paymentAdviceCountNextLast.call();
+            return td.bank.countPaymentAdviceEntries.call();
         }
     })
     .then(function(details) {
@@ -225,21 +222,19 @@ exports.processMaturedBond = function(_bondHash) {
         }
         else {
             // No additinal (new) entry should have been created
-            if (nextBankPaymentAdvice == 0)
-                assert.equal(0, details[2].valueOf(), "No additional payment advice entry should have been created");
-            else assert.equal(nextBankPaymentAdvice, +details[2].valueOf() + 1, "No additional payment advice entry should have been created");
+            assert.equal(nextBankPaymentAdvice, details.valueOf(), "No additional payment advice entry should have been created");
         }
 
-        // Check wc_bal_ba_fc balance in the pool
-        return td.pool.WC_Bal_BA_Fc.call();
+        // Check wc_bal_ba_cu balance in the pool
+        return td.pool.WC_Bal_BA_Cu.call();
     })
     .then(function(bal) {
-        assert.equal(td.wc_bal_ba_fc, bal.valueOf(), "Balance for WC_Bal_BA_Fc is incorrect");
-        // Check wc_transit_fc balance in the pool
-        return td.pool.WC_Transit_Fc.call();
+        assert.equal(td.wc_bal_ba_cu, bal.valueOf(), "Balance for WC_Bal_BA_Cu is incorrect");
+        // Check wc_transit_cu balance in the pool
+        return td.pool.WC_Transit_Cu.call();
     })
     .then(function(bal) {
-        assert.equal(td.wc_transit_fc, bal.valueOf(), "Balance for WC_Transit_Fc is incorrect");
+        assert.equal(td.wc_transit_cu, bal.valueOf(), "Balance for WC_Transit_Cu is incorrect");
         
         // Retrieve the hash map info from the bondfirstIdx, nextIdx, uint count
         return td.bond.hashMap.call();

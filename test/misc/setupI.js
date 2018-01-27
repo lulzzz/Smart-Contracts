@@ -22,13 +22,13 @@ exports.MIN_YIELD_PPB = 5000000;                       // (0.5 %)
 exports.MAX_YIELD_PPB = 500000000;                     // (50 %)
 
 // Bond constants
-exports.MIN_BOND_PRINCIPAL_FC = 10000;                 // ($ 100)
-exports.MAX_BOND_PRINCIPAL_FC = 10000000;              // ($ 100.000,--)
+exports.MIN_BOND_PRINCIPAL_CU = 10000;                 // ($ 100)
+exports.MAX_BOND_PRINCIPAL_CU = 10000000;              // ($ 100.000,--)
 exports.BOND_REQUIRED_SECURITY_REFERENCE_PPT = 200;    // (20 %)
 
 // Policy constants
-exports.MIN_POLICY_CREDIT_FC = 10000;                  // ($ 100)
-exports.MAX_POLICY_CREDIT_FC = 5000000;                // ($ 50.000,--)
+exports.MIN_POLICY_CREDIT_CU = 10000;                  // ($ 100)
+exports.MAX_POLICY_CREDIT_CU = 5000000;                // ($ 50.000,--)
 exports.MAX_DURATION_POLICY_RECONCILIATION_DAYS = 100;
 exports.POLICY_RECONCILIATION_SAFETY_MARGIN = 3;
 exports.MIN_DURATION_POLICY_PAUSED_DAY = 1;

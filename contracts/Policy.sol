@@ -23,21 +23,21 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
     
     struct PolicyData {
         // Index of this Policy
-        uint policyIdx;
+        uint idx;
         // Access key / password of the Bond owner
-        address policyOwnerAdr;
+        address owner;
         // Bank payment hash as provided by the bank
         bytes32 paymentAccountHash;
 
          // Policy document hash
-        bytes32 policyDocumentHash;
+        bytes32 documentHash;
         // Risk points associated with this policy
-        uint policyRiskPoints;
+        uint riskPoints;
 
         // Total premium payments made by the policy owner
-        uint premiumCredited_Fc;
+        uint premiumCredited_Cu;
         // Total premium this policy has been changed by the pool
-        uint premiumCharged_Fc_Ppt;
+        uint premiumCharged_Cu_Ppt;
 
         // Different states a Bond can be in 
         Lib.PolicyState state;
@@ -56,7 +56,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
     mapping(bytes32 => PolicyData) public dataStorage;
 
     // Mapping to store the risk premiums charged by the pool per risk point (current day => # cummulated days back => premium)
-    mapping(uint => mapping(uint => uint)) public premiumPerRiskPoint_Fc_Ppm;
+    mapping(uint => mapping(uint => uint)) public premiumPerRiskPoint_Cu_Ppm;
 
     // Events broadcasted by the Bond / Log events
     event LogPolicy(bytes32 indexed policyHash, address indexed owner, bytes32 indexed info, uint timestamp, uint state);
@@ -70,42 +70,43 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
     /**
     * @dev Modifier verifies if the Adjustor hash and signing private key and the adjustor's policy risk point limit are sufficient
     */
-    modifier isAdjustorPolicyPermissioned(bytes32 _adjustorHash, uint _policyRiskPoints) {
-        require(Adjustor(getAdjustorAdr()).isAdjustorPolicyPermissioned(_adjustorHash, msg.sender, _policyRiskPoints) == true);
+    modifier isAdjustorPolicyPermissioned(bytes32 _adjustorHash, uint _riskPoints) {
+        require(Adjustor(getAdjustorAdr()).isAdjustorPolicyPermissioned(_adjustorHash, msg.sender, _riskPoints) == true);
         _;
     }
 
     /**@dev Creates an new policy
      * @param _adjustorHash The hash of the adjustor creating this policy
-     * @param _policyOwnerAdr The address of the policy owner
-     * @param _policyDocumentHash The hash of the policy document
-     * @param _policyRiskPoints The risk points associated with this policy
+     * @param _owner The address of the policy owner. This must be an externally owned account and not a contract address!
+     * @param _documentHash The hash of the policy document
+     * @param _riskPoints The risk points associated with this policy
      */
-    function createPolicy(bytes32 _adjustorHash, address _policyOwnerAdr, bytes32 _policyDocumentHash, uint _policyRiskPoints) 
+    function createPolicy(bytes32 _adjustorHash, address _owner, bytes32 _documentHash, uint _riskPoints) 
         public
-        isAdjustorPolicyPermissioned(_adjustorHash, _policyRiskPoints)
+        isNotContractAdr(_owner)
+        isAdjustorPolicyPermissioned(_adjustorHash, _riskPoints)
     {
         // Ensure valid parameter have been provided
-        require(_policyOwnerAdr != 0x0);
-        require(_policyDocumentHash != 0x0);
-        require(_policyRiskPoints > 0);
+        require(_owner != 0x0);
+        require(_documentHash != 0x0);
+        require(_riskPoints > 0);
 
         // Create a new Policy hash by using random input parameters (Timestamp, nextIdx of the PolicyHashMapping)
-        bytes32 policyHash = keccak256(now, hashMap.nextIdx, address(this), _policyOwnerAdr);
+        bytes32 policyHash = keccak256(now, hashMap.nextIdx, address(this), _owner);
 
         // Add the policy data to the data storage
         dataStorage[policyHash] = PolicyData({
             // Specify the hashMap.nextIdx as the index for this new policy
-            policyIdx: hashMap.nextIdx,
+            idx: hashMap.nextIdx,
             // Save the address of the policy's owner
-            policyOwnerAdr: _policyOwnerAdr,
+            owner: _owner,
             // Set the policy document hash
-            policyDocumentHash: _policyDocumentHash,
+            documentHash: _documentHash,
             // Set the policy risk points
-            policyRiskPoints: _policyRiskPoints,
+            riskPoints: _riskPoints,
             // Set the policy's preliminary maturity date (this will be overwritten later)
-            premiumCredited_Fc: 0,
-            premiumCharged_Fc_Ppt: 0,
+            premiumCredited_Cu: 0,
+            premiumCharged_Cu_Ppt: 0,
             // Set the policys status to created
             state: Lib.PolicyState.Paused,
             // Set the remaining policy variables to 0 or 0x0
@@ -120,23 +121,23 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         hashMap.add(policyHash);
 
         // Add log entry to document creation of the policy (document policy hash and risk points)
-        LogPolicy(policyHash, _policyOwnerAdr, bytes32(_policyRiskPoints), now, uint(dataStorage[policyHash].state));
-        LogPolicy(policyHash, _policyOwnerAdr, bytes32(_policyDocumentHash), now, uint(dataStorage[policyHash].state));
+        LogPolicy(policyHash, _owner, bytes32(_riskPoints), now, uint(dataStorage[policyHash].state));
+        LogPolicy(policyHash, _owner, bytes32(_documentHash), now, uint(dataStorage[policyHash].state));
     }
 
     /**@dev Updates an existing policy
      * @param _adjustorHash The hash of the adjustor creating this policy
      * @param _policyHash The hash of the policy to update
-     * @param _policyDocumentHash The new hash of the policy document
-     * @param _policyRiskPoints The new risk points associated with this policy
+     * @param _documentHash The new hash of the policy document
+     * @param _riskPoints The new risk points associated with this policy
      */
-    function updatePolicy(bytes32 _adjustorHash, bytes32 _policyHash, bytes32 _policyDocumentHash, uint _policyRiskPoints) 
+    function updatePolicy(bytes32 _adjustorHash, bytes32 _policyHash, bytes32 _documentHash, uint _riskPoints) 
         public
-        isAdjustorPolicyPermissioned(_adjustorHash, _policyRiskPoints)
+        isAdjustorPolicyPermissioned(_adjustorHash, _riskPoints)
     {
         // Ensure valid parameter have been provided
-        require(_policyDocumentHash != 0x0);
-        require(_policyRiskPoints > 0);
+        require(_documentHash != 0x0);
+        require(_riskPoints > 0);
         // Ensure the policy is a valid and active policy
         require(isActive(_policyHash) == true);
 
@@ -145,15 +146,15 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
             require(reconcilePolicy(_policyHash) == Lib.PolicyState.Issued);
 
             // Adjust the total issued policy risk points
-            totalIssuedPolicyRiskPoints = totalIssuedPolicyRiskPoints + _policyRiskPoints - dataStorage[_policyHash].policyRiskPoints;
+            totalIssuedPolicyRiskPoints = totalIssuedPolicyRiskPoints + _riskPoints - dataStorage[_policyHash].riskPoints;
 
             // Update the policy data
-            dataStorage[_policyHash].policyDocumentHash = _policyDocumentHash;
-            dataStorage[_policyHash].policyRiskPoints = _policyRiskPoints;
+            dataStorage[_policyHash].documentHash = _documentHash;
+            dataStorage[_policyHash].riskPoints = _riskPoints;
 
             // Add log entry to document creation of the policy (document policy hash and risk points)
-            LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, bytes32(_policyRiskPoints), now, uint(dataStorage[_policyHash].state));
-            LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, bytes32(_policyDocumentHash), now, uint(dataStorage[_policyHash].state));
+            LogPolicy(_policyHash, dataStorage[_policyHash].owner, bytes32(_riskPoints), now, uint(dataStorage[_policyHash].state));
+            LogPolicy(_policyHash, dataStorage[_policyHash].owner, bytes32(_documentHash), now, uint(dataStorage[_policyHash].state));
 
             // Calculate the next reconciliation day
             uint nextDay = calculateNextReconciliationDay(_policyHash);
@@ -163,12 +164,12 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
             dataStorage[_policyHash].nextReconciliationDay = nextDay;
         } else {
             // Update the policy data
-            dataStorage[_policyHash].policyDocumentHash = _policyDocumentHash;
-            dataStorage[_policyHash].policyRiskPoints = _policyRiskPoints;
+            dataStorage[_policyHash].documentHash = _documentHash;
+            dataStorage[_policyHash].riskPoints = _riskPoints;
 
             // Add log entry to document creation of the policy (document policy hash and risk points)
-            LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, bytes32(_policyRiskPoints), now, uint(dataStorage[_policyHash].state));
-            LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, bytes32(_policyDocumentHash), now, uint(dataStorage[_policyHash].state));
+            LogPolicy(_policyHash, dataStorage[_policyHash].owner, bytes32(_riskPoints), now, uint(dataStorage[_policyHash].state));
+            LogPolicy(_policyHash, dataStorage[_policyHash].owner, bytes32(_documentHash), now, uint(dataStorage[_policyHash].state));
         }
     }
 
@@ -176,16 +177,16 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
             has been credited to the insurance pool's Premium Account.
      * @param _paymentAccountHash The payment account hash of the sender used for this bank payment.
      * @param _paymentSubject Payment particular/code/reference to be specified for the bank transaction
-     * @param _creditAmount_Fc The amount that has been credited to the Premium Account.
+     * @param _creditAmount_Cu The amount that has been credited to the Premium Account.
      * @return info describing an unsuccessfull funding otherwise empty (0x0)
      */
-    function processAccountCredit(bytes32 _paymentAccountHash, bytes32 _paymentSubject, uint _creditAmount_Fc)
+    function processAccountCredit(bytes32 _paymentAccountHash, bytes32 _paymentSubject, uint _creditAmount_Cu)
         public
         isIntAuth
         returns (bool success, bytes32 info, bytes32 policyHash)
     {
          // Verify if the paymentSubject provided matches the any of the Policy hashes
-        if (dataStorage[_paymentSubject].policyOwnerAdr != 0x0)
+        if (dataStorage[_paymentSubject].owner != 0x0)
             policyHash = _paymentSubject;
         else 
             return (false, bytes32("PaymentSubject"), 0x0);
@@ -195,22 +196,22 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
             return (false, bytes32("PolicyState"), 0x0);
         
         // Verify the amount credited is between min and max amount
-        if ((_creditAmount_Fc < Pool(getPoolAdr()).MIN_POLICY_CREDIT_FC()) ||
-            (_creditAmount_Fc > Pool(getPoolAdr()).MAX_POLICY_CREDIT_FC()))
+        if ((_creditAmount_Cu < Pool(getPoolAdr()).MIN_POLICY_CREDIT_CU()) ||
+            (_creditAmount_Cu > Pool(getPoolAdr()).MAX_POLICY_CREDIT_CU()))
             return (false, bytes32("CreditAmount"), 0x0);
 
         // Verify the payment account hash is valid in case previous premium payments have alredy been made
-        if ((dataStorage[policyHash].premiumCredited_Fc > 0) && 
+        if ((dataStorage[policyHash].premiumCredited_Cu > 0) && 
             (dataStorage[policyHash].paymentAccountHash != _paymentAccountHash))
             return (false, bytes32("PaymentAccountHash"), 0x0);
         
         // If the policy is in an issued state or policy is in a PostedLapsed state or policy is in a paused state but has previously already received payments
         if ((dataStorage[policyHash].state == Lib.PolicyState.Issued) || 
             (dataStorage[policyHash].state == Lib.PolicyState.PostLapsed) || 
-            ((dataStorage[policyHash].state == Lib.PolicyState.Paused) && (dataStorage[policyHash].premiumCredited_Fc > 0)))
+            ((dataStorage[policyHash].state == Lib.PolicyState.Paused) && (dataStorage[policyHash].premiumCredited_Cu > 0)))
         {
             // Credit the amount to the policy
-            dataStorage[policyHash].premiumCredited_Fc += _creditAmount_Fc;
+            dataStorage[policyHash].premiumCredited_Cu += _creditAmount_Cu;
 
             // If policy is in an issued state potentially perform a reconciliation
             if (dataStorage[policyHash].state == Lib.PolicyState.Issued) {
@@ -222,12 +223,12 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
 
         // If policy is in a paused state and this is the first premium payment being received
         } else if ((dataStorage[policyHash].state == Lib.PolicyState.Paused) && 
-            (dataStorage[policyHash].premiumCredited_Fc == 0))
+            (dataStorage[policyHash].premiumCredited_Cu == 0))
         {
             // Set the payment Account hash
             dataStorage[policyHash].paymentAccountHash = _paymentAccountHash;
             // Credit the amount to the policy
-            dataStorage[policyHash].premiumCredited_Fc += _creditAmount_Fc;
+            dataStorage[policyHash].premiumCredited_Cu += _creditAmount_Cu;
 
             // Calculate the next reconciliation day
             dataStorage[policyHash].nextReconciliationDay = calculateNextReconciliationDay(policyHash);
@@ -238,15 +239,15 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
                 // Change the policies status to Issued
                 dataStorage[policyHash].state = Lib.PolicyState.Issued;
                 // Add the policy risk points
-                totalIssuedPolicyRiskPoints += dataStorage[policyHash].policyRiskPoints;
+                totalIssuedPolicyRiskPoints += dataStorage[policyHash].riskPoints;
                 // Add log entry
-                LogPolicy(policyHash, dataStorage[policyHash].policyOwnerAdr, 0x0, now, uint(dataStorage[policyHash].state));
+                LogPolicy(policyHash, dataStorage[policyHash].owner, 0x0, now, uint(dataStorage[policyHash].state));
             }
 
         // If policy is in a lapsed state
         } else if (dataStorage[policyHash].state == Lib.PolicyState.Lapsed) {
             // Credit the amount to the policy
-            dataStorage[policyHash].premiumCredited_Fc += _creditAmount_Fc;
+            dataStorage[policyHash].premiumCredited_Cu += _creditAmount_Cu;
 
             // Calculate the next reconciliation day
             dataStorage[policyHash].nextReconciliationDay = calculateNextReconciliationDay(policyHash);
@@ -259,7 +260,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
                 // Change the policies status to Issued
                 dataStorage[policyHash].state = Lib.PolicyState.PostLapsed;
                 // Add log entry
-                LogPolicy(policyHash, dataStorage[policyHash].policyOwnerAdr, 0x0, now, uint(dataStorage[policyHash].state));
+                LogPolicy(policyHash, dataStorage[policyHash].owner, 0x0, now, uint(dataStorage[policyHash].state));
             }
             // In case insufficient funds have been credited to allow state to change set next reconciliation day to 0
             else dataStorage[policyHash].nextReconciliationDay = 0;
@@ -273,7 +274,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
      */
     function suspendPolicy(bytes32 _policyHash) public {
         // Ensure the sender of the transaction is the owner of the policy
-        require(dataStorage[_policyHash].policyOwnerAdr == msg.sender);
+        require(dataStorage[_policyHash].owner == msg.sender);
 
         // Ensure the policy is in an Issued state
         require(dataStorage[_policyHash].state == Lib.PolicyState.Issued);
@@ -286,13 +287,13 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         dataStorage[_policyHash].state = Lib.PolicyState.Paused;
 
         // Remove the policy risk points
-        totalIssuedPolicyRiskPoints -= dataStorage[_policyHash].policyRiskPoints;
+        totalIssuedPolicyRiskPoints -= dataStorage[_policyHash].riskPoints;
 
         // Set the next reconciliation day to the max duration this policy is allowed to remain in paused state
         dataStorage[_policyHash].nextReconciliationDay = currentPoolDay + MAX_DURATION_POLICY_PAUSED_DAY;
 
         // Add log entry
-        LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, 0x0, now, uint(dataStorage[_policyHash].state));
+        LogPolicy(_policyHash, dataStorage[_policyHash].owner, 0x0, now, uint(dataStorage[_policyHash].state));
     }
 
     /**@dev Function is called by the owner of a policy to re-issue a previously suspend the policy
@@ -300,7 +301,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
      */
     function unsuspendPolicy(bytes32 _policyHash) public {
         // Ensure the sender of the transaction is the owner of the policy
-        require(dataStorage[_policyHash].policyOwnerAdr == msg.sender);
+        require(dataStorage[_policyHash].owner == msg.sender);
 
         // Ensure the policy is in a Paused state
         require(dataStorage[_policyHash].state == Lib.PolicyState.Paused);
@@ -323,10 +324,10 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         dataStorage[_policyHash].state = Lib.PolicyState.Issued;
 
         // Add the policy risk points
-        totalIssuedPolicyRiskPoints += dataStorage[_policyHash].policyRiskPoints;
+        totalIssuedPolicyRiskPoints += dataStorage[_policyHash].riskPoints;
 
         // Add log entry
-        LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, 0x0, now, uint(dataStorage[_policyHash].state));
+        LogPolicy(_policyHash, dataStorage[_policyHash].owner, 0x0, now, uint(dataStorage[_policyHash].state));
     }
 
     /**@dev This function can only be called by the owner of the policy or the policy contract itself (this)
@@ -336,7 +337,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         // If the caller of this function is not the policy contract itself
         if (msg.sender != address(this)) {
             // Ensure the caller of the transaction is the owner of the policy
-            require(dataStorage[_policyHash].policyOwnerAdr == msg.sender);
+            require(dataStorage[_policyHash].owner == msg.sender);
         }
         // Ensure the policy is either in an Issued or Lapsed state
         require((dataStorage[_policyHash].state == Lib.PolicyState.Issued) ||
@@ -347,7 +348,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
             // Reconcile the policy
             reconcilePolicy(_policyHash);
             // Remove the policy risk points
-            totalIssuedPolicyRiskPoints -= dataStorage[_policyHash].policyRiskPoints;
+            totalIssuedPolicyRiskPoints -= dataStorage[_policyHash].riskPoints;
         }
         // Set the last and next reconciliation day
         dataStorage[_policyHash].lastReconciliationDay = currentPoolDay;
@@ -356,7 +357,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         dataStorage[_policyHash].state = Lib.PolicyState.Retired;
         // Refund the oustanding policy owner's account balance from the Premium Holding account by creating a payment advice
         
-        uint refundAmount = dataStorage[_policyHash].premiumCredited_Fc - (dataStorage[_policyHash].premiumCharged_Fc_Ppt / 10**3);
+        uint refundAmount = dataStorage[_policyHash].premiumCredited_Cu - (dataStorage[_policyHash].premiumCharged_Cu_Ppt / 10**3);
         // If the refund amount is greater than 0 then create a bank payment advice
         if (refundAmount > 0) {
             // Create payment instruction for the bank
@@ -367,7 +368,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         // Archive the policy
         hashMap.archive(_policyHash);
         // Add log entry
-        LogPolicy(_policyHash, dataStorage[_policyHash].policyOwnerAdr, 0x0, now, uint(dataStorage[_policyHash].state));
+        LogPolicy(_policyHash, dataStorage[_policyHash].owner, 0x0, now, uint(dataStorage[_policyHash].state));
     }
 
     function processPolicy(bytes32 _message) private {
@@ -401,9 +402,9 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
                         // Change the policy state to Lapsed
                         dataStorage[pHash].state = Lib.PolicyState.Lapsed;
                         // Remove the policy risk points
-                        totalIssuedPolicyRiskPoints -= dataStorage[pHash].policyRiskPoints;
+                        totalIssuedPolicyRiskPoints -= dataStorage[pHash].riskPoints;
                         // Create a log entry to document the change of the policy's state
-                        LogPolicy(pHash, dataStorage[pHash].policyOwnerAdr, 0x0, now, uint(dataStorage[pHash].state));
+                        LogPolicy(pHash, dataStorage[pHash].owner, 0x0, now, uint(dataStorage[pHash].state));
                     }
 
                 // ******************************************************************
@@ -416,7 +417,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
                     dataStorage[pHash].lastReconciliationDay = currentPoolDay;
                     dataStorage[pHash].nextReconciliationDay = currentPoolDay + MAX_DURATION_POLICY_LAPSED_DAY;
                     // Create a log entry to document the change of the policy's state
-                    LogPolicy(pHash, dataStorage[pHash].policyOwnerAdr, 0x0, now, uint(dataStorage[pHash].state));      
+                    LogPolicy(pHash, dataStorage[pHash].owner, 0x0, now, uint(dataStorage[pHash].state));      
                 
                 // ******************************************************************
                 // POLICY STATE: PostLapsed   ==>   New State: Issued
@@ -425,12 +426,12 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
                     // Change the policy state to Issued
                     dataStorage[pHash].state = Lib.PolicyState.Issued;
                     // Add the policy risk points
-                    totalIssuedPolicyRiskPoints += dataStorage[pHash].policyRiskPoints;
+                    totalIssuedPolicyRiskPoints += dataStorage[pHash].riskPoints;
                     // Set the last and next reconciliation day
                     dataStorage[pHash].lastReconciliationDay = currentPoolDay;
                     dataStorage[pHash].nextReconciliationDay = calculateNextReconciliationDay(pHash);
                     // Create a log entry to document the change of the policy's state
-                    LogPolicy(pHash, dataStorage[pHash].policyOwnerAdr, 0x0, now, uint(dataStorage[pHash].state));
+                    LogPolicy(pHash, dataStorage[pHash].owner, 0x0, now, uint(dataStorage[pHash].state));
 
                 // ******************************************************************
                 // POLICY STATE: Lapsed   ==>   New State: Retired
@@ -461,7 +462,7 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         uint totalDays = currentPoolDay - dataStorage[_policyHash].lastReconciliationDay;
         // Only adjust the premiums charged if the total days to reconcile is greater than 0
         if (totalDays > 0)
-            dataStorage[_policyHash].premiumCharged_Fc_Ppt += (dataStorage[_policyHash].policyRiskPoints * premiumPerRiskPoint_Fc_Ppm[currentPoolDay][totalDays] / (10**3));
+            dataStorage[_policyHash].premiumCharged_Cu_Ppt += (dataStorage[_policyHash].riskPoints * premiumPerRiskPoint_Cu_Ppm[currentPoolDay][totalDays] / (10**3));
         // Set the last reconciliation day to today
         dataStorage[_policyHash].lastReconciliationDay = currentPoolDay;
         // Calculate the ideal next reconciliation day in the future
@@ -486,17 +487,17 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         returns (uint nextRecDay)
     {
         // Calculate the remaining funds for this policy
-        uint funds_Fc_Ppt = (dataStorage[_policyHash].premiumCredited_Fc * (10**3)) - dataStorage[_policyHash].premiumCharged_Fc_Ppt;
+        uint funds_Cu_Ppt = (dataStorage[_policyHash].premiumCredited_Cu * (10**3)) - dataStorage[_policyHash].premiumCharged_Cu_Ppt;
         // Calculate the premium charged for the current pool day for this policy 
-        uint costPerDay_Fc_Ppt = (premiumPerRiskPoint_Fc_Ppm[currentPoolDay][0] * dataStorage[_policyHash].policyRiskPoints) / (10**3);
+        uint costPerDay_Cu_Ppt = (premiumPerRiskPoint_Cu_Ppm[currentPoolDay][0] * dataStorage[_policyHash].riskPoints) / (10**3);
         // If the remaining funds for this policy are insufficient to cover today's premium return 0
-        if (costPerDay_Fc_Ppt > funds_Fc_Ppt)
+        if (costPerDay_Cu_Ppt > funds_Cu_Ppt)
             return 0;
         // If the costsPerDay are 0 return the next reconciliation day of tomorrow
-        if (costPerDay_Fc_Ppt == 0)
+        if (costPerDay_Cu_Ppt == 0)
             return currentPoolDay + 1;
         // Calculate the ideal next reconciliation day with safety margin
-        uint futureDays = (funds_Fc_Ppt / (POLICY_RECONCILIATION_SAFETY_MARGIN * costPerDay_Fc_Ppt));
+        uint futureDays = (funds_Cu_Ppt / (POLICY_RECONCILIATION_SAFETY_MARGIN * costPerDay_Cu_Ppt));
         if (futureDays < 100) {
             return currentPoolDay + 1 + futureDays;
         } else { 
@@ -515,15 +516,15 @@ contract Policy is SetupI, IntAccessI, NotificationI, HashMapI {
         // Save the new currentPoolDay
         currentPoolDay = _currentPoolDay;
         // Ensure that this function can only be called once for a particular day by the pool by checking if the current pool day's risk point premium is still 0
-        assert(premiumPerRiskPoint_Fc_Ppm[currentPoolDay][0] == 0);
+        assert(premiumPerRiskPoint_Cu_Ppm[currentPoolDay][0] == 0);
         // Save premium per risk point as calculated for today
-        premiumPerRiskPoint_Fc_Ppm[currentPoolDay][0] = _premiumPerRiskPoint;
+        premiumPerRiskPoint_Cu_Ppm[currentPoolDay][0] = _premiumPerRiskPoint;
         // Save premium per risk point for 1 day (only yesterday)
-        premiumPerRiskPoint_Fc_Ppm[currentPoolDay][1] = premiumPerRiskPoint_Fc_Ppm[currentPoolDay - 1][0];
+        premiumPerRiskPoint_Cu_Ppm[currentPoolDay][1] = premiumPerRiskPoint_Cu_Ppm[currentPoolDay - 1][0];
         // Iterate and calculate the risk points for any number of days for reconciliation
         for (uint i = 2; i<=MAX_DURATION_POLICY_RECONCILIATION_DAYS; i++) {
             // Calculate the historic cummulated premiums per risk points over the past days (copy of yesterday's history + new premium for today)
-            premiumPerRiskPoint_Fc_Ppm[currentPoolDay][i] = premiumPerRiskPoint_Fc_Ppm[currentPoolDay - 1][i-1] + premiumPerRiskPoint_Fc_Ppm[currentPoolDay][1];
+            premiumPerRiskPoint_Cu_Ppm[currentPoolDay][i] = premiumPerRiskPoint_Cu_Ppm[currentPoolDay - 1][i-1] + premiumPerRiskPoint_Cu_Ppm[currentPoolDay][1];
         }
     }
     

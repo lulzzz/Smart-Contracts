@@ -54,6 +54,19 @@ contract IntAccessI {
     modifier isTimerAuth() {require((msg.sender == timerAdr)); _;}
 
     /**
+     * @dev This modifiers checks if the provided address is a contract address or an externaly owned account
+     * @param _adr Address to verify
+     */
+    modifier isNotContractAdr(address _adr) {
+        uint size;
+        // Retrieve the size of the code that is stored against the provided address
+        assembly { size := extcodesize(_adr) }
+        // Ensure that the 'address size' is 0 (if the size is greater than 0 this address is owned by a contract)
+        require(size == 0);
+        _;
+    }
+
+    /**
     * @dev Sets all the contract addresses for the solution
     */
     function setContractAdr(

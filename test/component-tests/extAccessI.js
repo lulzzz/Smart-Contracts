@@ -47,13 +47,25 @@ contract('ExtAccessI', function(accounts) {
         return 1;
     }
 
-    it("should deploy a new ExtAccessI contract and verify initialisation variables", function() {
+    it("should deploy a new ExtAccessI contract and verify initialization variables", function() {
         // Deploy a new contract of ExtAccessI and specify account[0] as the initial key to be added
         return abiExtAccI.new(accounts[0])
         .then(function(instance) {
             // Store contract instance in variable
             extAccI = instance;
             // Verify init variables
+            return verifyExtAccIntVariables(accounts[0], 0x0, 0x0, 0x0, 0x0, 0x0, false);
+        })
+        .then(function(val) {
+            // Awaiting the dummy val return value before continuing with the next test set
+        });
+    });
+
+    it("should fail to add a contract address (only externally owned accounts are permitted) submitted by key 0", function() {
+        // Add a new key
+        return extAccI.addKey(extAccI.address, {from: accounts[0]})
+        .then(function(tx) {
+            assert.equal(tx.receipt.status, 0, "The transaction to add a contract address must be rejected")
             return verifyExtAccIntVariables(accounts[0], 0x0, 0x0, 0x0, 0x0, 0x0, false);
         })
         .then(function(val) {

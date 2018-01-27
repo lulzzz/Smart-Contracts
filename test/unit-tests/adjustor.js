@@ -15,8 +15,8 @@ var td = require("../misc/testData.js");
 // event LogAdjustor(bytes32 indexed adjustorHash, address indexed owner, bytes32 indexed info, uint timestamp);
 // ----------------
 
-// createAdjustor(address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
-exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement) {
+// createAdjustor(address _adjustorAdr, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement) {
     var adjustorHash;
     var adjustorHashMapInfo;
     // Retrieve the hash map info from the adjustor firstIdx, nextIdx, count
@@ -25,7 +25,7 @@ exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Fc, _p
         // Store the hash map info for now
         adjustorHashMapInfo = info;
         // Create a new Adjustor via the trust contract signing with the Trust's authorisation keys
-        return td.trust.createAdjustor(_adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement, {from: td.accounts[0]});
+        return td.trust.createAdjustor(_adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement, {from: td.accounts[0]});
     })
     .then(function(tx) {
         // Get the adjustor hash
@@ -35,7 +35,7 @@ exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Fc, _p
         // idx                               0                             1                      2          3
         // Event 0 - Adjustor creation
         assert.equal(_adjustorAdr, miscFunc.getAdrFromBytes32(miscFunc.eventLog('Adjustor', tx, 0, 1)), "Adjustor address is incorrect");
-        assert.equal(_settlementApprovalAmount_Fc, parseInt(miscFunc.eventLog('Adjustor', tx, 0, 2)), "Adjustor settlement approval amount is incorrect");
+        assert.equal(_settlementApprovalAmount_Cu, parseInt(miscFunc.eventLog('Adjustor', tx, 0, 2)), "Adjustor settlement approval amount is incorrect");
         
         // Event 1 - Adjustor creation
         assert.equal(_adjustorAdr, miscFunc.getAdrFromBytes32(miscFunc.eventLog('Adjustor', tx, 1, 1)), "Adjustor address is incorrect");
@@ -50,7 +50,7 @@ exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Fc, _p
     })
     .then(function (aData) {
         // Call the function to verify all bond data
-        return miscFunc.verifyAdjustorData(aData, adjustorHashMapInfo[1].valueOf(), _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement);
+        return miscFunc.verifyAdjustorData(aData, adjustorHashMapInfo[1].valueOf(), _adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement);
     })
     .then(function () {
         // Verify the adjustor has been added to the hash map
@@ -67,8 +67,8 @@ exports.createAdjustor = function(_adjustorAdr, _settlementApprovalAmount_Fc, _p
     });
 }
 
-// updateAdjustor(bytes32 _adjustorHash, address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
-exports.updateAdjustor = function(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement) {
+// updateAdjustor(bytes32 _adjustorHash, address _adjustorAdr, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+exports.updateAdjustor = function(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement) {
     var adjustorHashMapInfo;
     // Retrieve the hash map info from the adjustor firstIdx, nextIdx, count
     return td.adjustor.hashMap.call()
@@ -76,7 +76,7 @@ exports.updateAdjustor = function(_adjustorHash, _adjustorAdr, _settlementApprov
         // Store the hash map info for now
         adjustorHashMapInfo = info;
         // Create a new Adjustor via the trust contract signing with the Trust's authorisation keys
-        return td.trust.updateAdjustor(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement, {from: td.accounts[0]});
+        return td.trust.updateAdjustor(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement, {from: td.accounts[0]});
     })
     .then(function(tx) {
         // Event is triggered as part of the adjustor update log[0]: Adjustor event
@@ -85,7 +85,7 @@ exports.updateAdjustor = function(_adjustorHash, _adjustorAdr, _settlementApprov
         // Event 0 - Adjustor update
         assert.equal(_adjustorHash, miscFunc.eventLog('Adjustor', tx, 0, 0), "Adjustor hash is incorrect");
         assert.equal(_adjustorAdr, miscFunc.getAdrFromBytes32(miscFunc.eventLog('Adjustor', tx, 0, 1)), "Adjustor address is incorrect");
-        assert.equal(_settlementApprovalAmount_Fc, parseInt(miscFunc.eventLog('Adjustor', tx, 0, 2)), "Adjustor settlement approval amount is incorrect");
+        assert.equal(_settlementApprovalAmount_Cu, parseInt(miscFunc.eventLog('Adjustor', tx, 0, 2)), "Adjustor settlement approval amount is incorrect");
         
         // Event 1 - Adjustor update
         assert.equal(_adjustorHash, miscFunc.eventLog('Adjustor', tx, 1, 0), "Adjustor hash is incorrect");
@@ -102,7 +102,7 @@ exports.updateAdjustor = function(_adjustorHash, _adjustorAdr, _settlementApprov
     })
     .then(function (aData) {
         // Call the function to verify all bond data
-        return miscFunc.verifyAdjustorData(aData, null, _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement);
+        return miscFunc.verifyAdjustorData(aData, null, _adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement);
     })
     .then(function () {
         // Retrieve the hash map info from the adjustor firstIdx, nextIdx, uint count

@@ -4,27 +4,27 @@
 
 ## Overview
 
-The smart contracts in this repository provide an ecosystem to operate a self-governing, subscription based, people-to-people insurance service. To achieve this, **insurance pools** are formed. Each pool represents a group of people who chose to form an insurance community and engage in this service. Alternatively, an insurance pool can be created specifically to support an existing community who would like to offer an insurance service to its members.
+The smart contracts in this repository provide an ecosystem to operate a self-governing, subscription-based, people-to-people insurance service. To achieve this, **insurance pools** are formed. Each pool represents a group of people who chose to form an insurance community and engage in this service. Alternatively, an insurance pool can be created specifically to support an existing community who would like to offer an insurance service to its members.
 
 Possible examples of insurance pools are:
 * New Hampshire Car Insurance 
-* Home and Contents insurance for IBM employees
-* CrossFit Health insurance
+* Home and Contents Insurance for IBM employees
+* CrossFit Health Insurance
 * Professional Indemnity Insurance for independent contractors
 
-Each insurance pool community is run and operated independently from one another. This model also operates currency agnostic with a preference towards Fiat (sorry folks). Crypto currency is only used to pay for the transactions being processed on the Blockchain. Further information and a detailed description of the mathematical functioning of this model can be accessed in the [white paper](https://github.com/HonestInsurance/Resources/blob/master/research/WhitePaper-HonestInsurance.pdf?raw=true).
+Each insurance pool community is run and operated independently from one another. This model is currency agnostic and can be operated Fiat as well as Crypto currency. Further information and a detailed description of the mathematical functioning of this model can be accessed in this [white paper](https://github.com/HonestInsurance/Resources/blob/master/WhitePaper-HonestInsurance.pdf?raw=true).
 
 **Self-Governing**
 
-This model assesses the insurance pool's historic operating expenses, its current number of policy holders and calculates the ideal insurance premium to be charged for the next day on a daily basis.
+On a daily basis, this model assesses the insurance pool's historic operating expenses, its current number of policy holders and calculates the ideal insurance premium to be charged for the next day.
 
-**Subscription based**
+**Subscription-based**
 
 Since the policy premiums are charged on a daily basis, each insurance consumer is able to 'pause' coverage for a number of days and/or retire an insurance policy any time.
 
 **People-to-People**
 
-The reasoning for not calling this model a peer-to-peer is because peer-to-peer insurance assumes that the insurance consumers are providing as well as receiving insurance cover to each other at the same time. In this model, the 'first layer' of insurance is provided by the Liquidity Providers (by purchasing bonds and providing the pool with liquidity). Hence, the notion of People-to-People.
+The reasoning for not calling this model 'peer-to-peer' is because peer-to-peer insurance assumes that the insurance consumers are providing as well as receiving insurance cover to each other at the same time. In this model, the 'first layer' of insurance is provided by the Liquidity Providers (via purchasing bonds that provide the pool with liquidity). Hence, the notion of People-to-People.
 
 -----------------------
 
@@ -35,35 +35,35 @@ This model necessitates the engagement of the stakeholders listed below.
 
 | Stakeholder             | Description                                                                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Consumers**           | Individuals who want to receive an insurance service                                                                                                                      |
-| **Liquidity Providers** | Provide capital (by purchasing bonds) in exchange for receiving back their principal plus yield when the bond matures.                                                    |
-| **Pool Operators**      | An organisation that is responsible for running the day to day operations of this insurance ecosystem                                                                     |
-| **Trust (Mutual)**      | The 'owners' and representatives of an insurance pool from a legal perspective. The trust or mutual (as the name suggests) should be a set up as a non-for-profit entity. |
-| **Adjustors**           | Assess and make decisions about the insurance pool's claims (are called settlements in this model)                                                                        |
+| **Consumers**           | Individuals who want to receive the insurance service                                                                                                                     |
+| **Liquidity Providers** | Provide capital (by purchasing bonds) in exchange for receiving back their principal plus yield when the bond matures                                                     |
+| **Pool Operators**      | An organization that is responsible for running the day to day operations of the insurance ecosystem                                                                      |
+| **Trust (Mutual)**      | The 'owners' and representatives of an insurance pool from a legal perspective. The trust or mutual (as the name suggests) should be a set up as a not-for-profit entity. |
+| **Adjustors**           | Assess and make decisions about the insurance pool's claims (which are called settlements in this model)                                                                  |
 | **Service Providers**   | Provide the services to the insurance pool's consumers                                                                                                                    |
 
 The diagram below illustrates the relationship between these stakeholders and the flow of funds between them.
 
 <img src="https://github.com/HonestInsurance/Resources/blob/master/diagrams/InsuranceModel.png?raw=true" width="600">
 
-Each arrow in this diagram represents a flow of funds (currency). For this insurance model to function three bank accounts called
-* Premium Holding Account,
+Each arrow in this diagram represents a flow of funds (currency). For this insurance model to function three currency accounts called
+* Premium Holding Account
 * Bond Holding Account and
 * Funding Account 
  
-are required. These are traditional checking accounts denominated in the national currency the insurance pool operates in. 
+are required. These can be either traditional checking accounts denominated in Fiat currency or three crypto currency addresses 'providing' the necessary banking services.
 
-The funds in the `Funding Account` are used to pay for the insurance services the insurance consumers are receiving. When additional demand of liquidity is required (i.e. the Balance of the funding account has become too low), liquidity providers are able to contribute funds by purchasing bonds. Following the liquidity providers transfer the bond principal amount to the `Funding Account`.
+The funds in the `Funding Account` are used to pay for the insurance services the insurance consumers are receiving. When additional demand of liquidity is required (i.e. the balance of the funding account has become too low), liquidity providers are able to contribute funds by purchasing bonds. In this case the liquidity providers transfer the bond principal amount to the `Funding Account`.
 
 When a bond matures, the bond's principal plus yield are paid back to the liquidity provider using the `Bond Holding Account`. It is the task of the insurance pool contract to ensure the `Bond Holding Account` remains sufficiently funded to settle current and future maturing bonds.
 
-Lastly, insurance consumers deposit the premiums in to the `Premium Holding Account`. The purpose of this account - as the name suggests - is only to temporarily hold the consumer's premium while it is consumed little by little on a daily basis. Put another way, all the funds in this account are still owned by the insurance consumers. Hence, an insurance consumer can choose the premium payment frequency as well as the payment amount, given that her balance remains positive (otherwise their policy would Lapse). On a daily basis, the total combined premium amount for all insurance consumer (and their active policies) is calculated and a single bank transaction from the `Premium Holding Account` to the `Bond Holding Account` is executed.
+Lastly, insurance consumers deposit the premiums in to the `Premium Holding Account`. The purpose of this account - as the name suggests - is only to temporarily hold the consumer's premium while it is consumed little by little on a daily basis. Put another way, all the funds in this account are still owned by the insurance consumers. Hence, an insurance consumer can choose the premium payment frequency as well as the payment amount, provided that her balance remains positive (otherwise her policy would lapse). On a daily basis, the total combined premium amount for all insurance consumers (and their active policies) is calculated and a single bank transaction from the `Premium Holding Account` to the `Bond Holding Account` is executed.
 
 -----------------------
 
 ## Looking under the hood
 
-A running instance of an insurance ecosystem requires the following 9 smart contracts to be deployed and initialised on an EVM powered Blockchain. No additional contracts are created during the operation of the insurance service. The remaining contracts not mentioned in the list below are interface or abstract contracts or contracts used for testing and deployment purposes.
+A running instance of an insurance ecosystem requires the following nine smart contracts to be deployed and initialized on an Ethereum Virtual Machine (EVM) powered Blockchain. No additional contracts are created during the operation of the insurance service. The remaining contracts not mentioned in the list below are interface or abstract contracts or contracts used for testing and deployment purposes.
 * Lib
 * Trust
 * Pool
@@ -74,33 +74,33 @@ A running instance of an insurance ecosystem requires the following 9 smart cont
 * Settlement
 * Bond
 
-Following a selected few event log files are presented (and explained more in detail) that were generated by running the test script `test.js`
+In the sections following, a selected few event log files are presented and explained more in detail. These were generated by running the test script `test.js`
 
 ### Pool
 
-The pool contract is the centre piece of this ecosystem containing the pool's core logic to be self-governing. The log files below are generated every day presenting the most important variables that were re-calculated during the overnight processing. The 1st column displays the date this log file was created. The 3rd column refers to the 'current day' (days since 1/1/1970) the pool is currently in. The 2nd column is the event log's subject while the 4th column holds the corresponding value.
+The pool contract is the centrepiece of this ecosystem as it contains the core logic required for the pool to be self-governing. The log files below are generated each day presenting the most important variables that were re-calculated during the overnight processing. The first column displays the date this log file was created. The second column is the event log's subject while the third column holds the corresponding value. The fourth column refers to the 'current day' (days since 1/1/1970) the pool is currently in.
 
 ```
 ...
-2018-02-05 00:00:00   WcExpenseForecastFc         17567                         $        14,000.00
-2018-02-05 00:00:00   WcBondFc                    17567                         $        12,187.67
-2018-02-05 00:00:00   BondGradientPpq             17567                              18,755,016
-2018-02-05 00:00:00   BondYieldPpb                17567                              22,857,995
-2018-02-05 00:00:00   BondPayoutNext3DaysFc       17567                                          -
-2018-02-05 00:00:00   BondPayoutFutureFc          17567                         $           793.66
-2018-02-05 00:00:00   PremiumPerRiskPointPpm      17567                              66,138,333
-2018-02-06 00:00:00   TotalRiskPoints             17567                                   1,200
-2018-02-06 00:00:00   PremiumFc                   17567                         $           793.65
+2018-02-05 00:00:00   WcExpenseForecastCu            $        14,000.00             17567
+2018-02-05 00:00:00   WcBondCu                       $        12,187.67             17567
+2018-02-05 00:00:00   BondGradientPpq                     18,755,016                17567
+2018-02-05 00:00:00   BondYieldPpb                        22,857,995                17567
+2018-02-05 00:00:00   BondPayoutNext3DaysCu                           -             17567
+2018-02-05 00:00:00   BondPayoutFutureCu             $           793.66             17567
+2018-02-05 00:00:00   PremiumPerRiskPointPpm              66,138,333                17567
+2018-02-06 00:00:00   TotalRiskPoints                          1,200                17567
+2018-02-06 00:00:00   PremiumCu                      $           793.65             17567
 ...
 ```
 
-The entry `WcExpenseForecastFc` states a value of $ 14,000.00 and is calculated by using the insurance pool's historic expenses. This expense forecast is then used as an input variable to calculate the value for `WcBondFc` of $ 12,187.67 which is then offered to the liquidity providers to purchase bonds. `BondGradientPpq` and `BondYieldPpb` describe the yield at which these bonds can be purchased (e.g. the specified yield value of 22,857,995 equivalents to 2.2857995%). The two `BondPayout` entries state the total value of bonds that mature within the next 3 days and in the future (averaged per day) respectively.
+The entry `WcExpenseForecastCu` states a value of $ 14,000.00 and is calculated by using the insurance pool's historic expenses. This expense forecast is then used as an input variable to calculate the value for `WcBondCu` of $ 12,187.67 which is then offered to the liquidity providers to purchase bonds. `BondGradientPpq` and `BondYieldPpb` describe the yield at which these bonds can be purchased (e.g. the specified yield value of 22,857,995 equates to 2.2857995%). The two `BondPayout` entries state the total value of bonds that mature within the next three days and in the future (averaged per day) respectively.
 
-`PremiumPerRiskPointPpm` represents one of the most important variables that is calculated every night and defines the premium amount per risk point every policy is 'charged' for the day of 17567. `TotalRiskPoint` states the combined risk point value of all the policies that were active today. By multiplying `TotalRiskPoint` with `PremiumPerRiskPointPpm` today's premium is calculated. `66,138,333 * 1,200 / 1,000,000 = 79365.9996 cent` which is the equivalent of **$ 793.65** (Note: The Value of `PremiumPerRiskPointPpm` is stored in `Ppm` as in parts per million hence the division by `1,000,000`). This premium amount of **$ 793.65** is then debited from the Premium Holding Account and credited to the Bond Holding Account.
+`PremiumPerRiskPointPpm` represents one of the most important variables that is calculated every night and defines the premium amount per risk point each policy is 'charged' for the day of 17567. `TotalRiskPoints` states the combined risk point value of all the policies that were active today. By multiplying `TotalRiskPoints` with `PremiumPerRiskPointPpm` today's premium is calculated. `66,138,333 * 1,200 / 1,000,000 = 79365.9996 cents` which is the equivalent of **$ 793.65** (Note: The value of `PremiumPerRiskPointPpm` is stored in `Ppm` (parts per million) hence the division by `1,000,000`). This premium amount of **$ 793.65** is then debited from the `Premium Holding Account` and credited to the `Bond Holding Account`.
 
 ### Bond
 
-The bond contract holds the data about all current and matured bonds. Below all the available log files are displayed for a single bond (uniquely identified by its hash value). The second column shows the bond's hash (only displayed in here abbreviated) while the 5th column shows the bond owner's address (also displayed abbreviated). The 3rd column indicates the state the bond was in when the log file was added while the 4th column displays further useful details about this bond.
+The bond contract holds the data about all current and matured bonds. Below all the available log files are displayed for a single bond (uniquely identified by its hash value). The second column shows the bond's hash (abbreviated here) while the fifth column shows the bond owner's address (also displayed abbreviated). The third column indicates the state the bond was in when the log file was added while the fourth column displays further details about this bond.
 
 ```
 Bond Hash: 0x9a9a7136ef13d3ea22b710119e7a1d1075a1cdef8355ee41d726096cea727cd1
@@ -114,14 +114,14 @@ Bond Hash: 0x9a9a7136ef13d3ea22b710119e7a1d1075a1cdef8355ee41d726096cea727cd1
 2018-04-18 07:35:00   0x9a9a...7cd1   Matured                  $            251.25   0xf17f52151e...
 ```
 
-The log files of the bond above show that this bond was created on 2018-01-18 08:35:02 with a requested bond principal of $ 250.00; The bond was finally singed by the pool with a promised bond yield of 5,000,000 (which translates into 0.5%) and is scheduled to mature 3 months later on 2018-04-18 07:35:00; This bond was also used to be a reference for another bond with the bond hash of 0x87e6...8ea8 before it returned it's state back to Issued; Lastly, the bond matured on 2018-04-18 07:35:00 and the bond's principal and yield were paid back to the liquidity provider (principal of $ 250.00 plus the yield of $ 250.00 * 0.005 equals the pay-out amount of $ 251.25);
+The log files of the bond above show that this bond was created on 2018-01-18 08:35:02 with a requested bond principal of $ 250.00. The bond was finally signed by the pool with a promised bond yield of 5,000,000 (which translates into 0.5%) and is scheduled to mature 3 months later on 2018-04-18 07:35:00. This bond was also used to be a reference for another bond with the bond hash of 0x87e6...8ea8 before it returned its state back to Issued. Lastly, the bond matured on 2018-04-18 07:35:00 and the bond's principal and yield were paid back to the liquidity provider (principal of $ 250.00 plus the yield of $ 250.00 * 0.005 equals the pay-out amount of $ 251.25).
 
 The diagram below shows the states and life-cycle of a bond in this ecosystem.
 <img src="https://github.com/HonestInsurance/Resources/blob/master/diagrams/BondStates.png?raw=true" width="700">
 
 ### Policy
 
-The policy contract contains all the policy related information on all the policies that are managed by this insurance pool. The second column shows the policy's hash while the 5th column shows the policy owner's address. The 3rd column indicates the state the policy was in when the log file was added while the 4th column displays further useful details about this bond.
+The policy contract contains all the policy related information on all the policies that are managed by this insurance pool. The second column shows the policy's hash (only abbreviated) while the fifth column shows the policy owner's address. The third column indicates the state the policy was in when the log file was added while the fourth column displays further details about this policy.
 
 ```
 Policy Hash: 0x22305bcf99b225e25ca70db8c1caa426b058e558c14d399113fbf9e0de04cee7
@@ -132,7 +132,7 @@ Policy Hash: 0x22305bcf99b225e25ca70db8c1caa426b058e558c14d399113fbf9e0de04cee7
 2018-02-13 08:35:02   0x2230...cee7   Retired                 -      0xd77216b732...
 ```
 
-This policy was created on 2018-01-18 08:35:04 with the policy document's hash of 0xa869...a876 and 10 risk points associated to it. The policy was issued on the 2018-01-18 08:35:04 and was finally retired on 2018-02-13 08:35:02. By taking the log files of the pool as shows earlier into consideration and looking at the log entry called `PremiumPerRiskPointPpm` we can see a value of `66,138,333`. Multiplying this value with this policy's risk points we get the premium this policy was charged on this particular day `66,138,333 * 10 / 1,000,000 = 661.38 cent` which is the equivalent of **$ 6.6138** (Note: The Value of `PremiumPerRiskPointPpm` is stored in `Ppm` as in parts per million hence the division by `1,000,000`)
+This policy was created on 2018-01-18 08:35:04 with the policy document's hash of 0xa869...a876 and 10 risk points associated with it. The policy was issued on the 2018-01-18 08:35:04 and was finally retired on 2018-02-13 08:35:02. By taking the log files of the pool as shown earlier into consideration and looking at the log entry called `PremiumPerRiskPointPpm` we can see a value of `66,138,333`. Multiplying this value with this policy's risk points we get the premium this policy was charged on this particular day `66,138,333 * 10 / 1,000,000 = 661.38 cent` which is the equivalent of **$ 6.6138** (Note: The Value of `PremiumPerRiskPointPpm` is stored in `Ppm` (parts per million) hence the division by `1,000,000`)
 
 The diagram below shows the states and life-cycle of a policy in this ecosystem.
 
@@ -140,7 +140,7 @@ The diagram below shows the states and life-cycle of a policy in this ecosystem.
 
 ### Adjustor
 
-The 2nd column in the adjustor log files below display the hash of this adjustor and the 3rd column shows the adjustor's public key. The 4th column shows further adjustor relevant information.
+The second column in the adjustor log files below display the hash of this adjustor and the third column shows the adjustor's public key. The fourth column shows further adjustor relevant information.
 
 ```
 Adjustor Hash: 0x07f3cce2be8998b63dcbd54347160db978952f063677b3e2cc44762ec5d586b1
@@ -154,9 +154,9 @@ This adjustor is authorised to process settlements (claims) of up to a total val
 
 ### Settlement
 
-The reasoning for calling this contract settlement (as opposed to claim) is that in an insurance service not all consumer related expenditures might be the result of a claim. As an example, a health insurance provider might employ health coaches to assist their consumer base to live a healthier lifestyle. The term settlement is therefore better suited to describe expenses that occur as a result of servicing consumers (with the additional benefit of having a much more positive association compared to the word claim).
+The reason for calling this a settlement contract (as opposed to claim contract) is that it's possible that some of the consumer-related expenditures may not be the result of a claim. As an example, a health insurance provider might employ health coaches to assist their consumer base to live a healthier lifestyle. The term 'settlement' is therefore better suited to describe expenses that occur as a result of servicing consumers (with the additional benefit of having a more positive association compared to the word claim).
 
-The 2nd column in the settlement log files below show the unique hash of the settlement while the 3rd column shows its status. The 4th column displays the hash of the policy this settlement refers to as well as any additional hashes of documents that were created in the process of this settlement. The last column shows the hash of the adjustor processing this settlement. Note: The final settlement amount is stored in the `Settlement.sol` contract itself and not shown in the log files.
+The second column in the settlement log files below show the unique hash of the settlement while the third column shows its status. The fourth column displays the hash of the policy this settlement refers to as well as any additional hashes of documents that were created in the processing of this settlement. The last column shows the hash of the adjustor processing this settlement. Note: The final settlement amount is stored in the `Settlement.sol` contract itself and not shown in the log files.
 
 ```
 Settlement Hash: 0xd361db77a4531d375bf7107ab03dbdea239bb5e12f3b85b5d8d49a6d9bdee6f4
@@ -170,7 +170,7 @@ Settlement Hash: 0xd361db77a4531d375bf7107ab03dbdea239bb5e12f3b85b5d8d49a6d9bdee
 
 ## Test Execution
 
-The output of running the `test.js` test script is presented below. Due to the number of asserts (checks) performed (about 2.300) in the 69 unit-test below the entire test script requires about 50 seconds to complete (hardware used is latest version of MacBook Pro).
+The output of running the `test.js` test script is presented below. Due to the number of asserts (checks) performed (about 2,300) in the 69 unit-test below the entire test script requires about 50 seconds to complete (hardware used is latest model of MacBook Pro).
 
 ```
 truffle(develop)> test test/test.js
@@ -249,14 +249,14 @@ Contract: All Insurance Ecosystem Contracts
   69 passing (47s)
 ```
 
-The 3 tests below are verifying the interface contracts `ExtAccessI`, `IntAccessI` and the `HashMapI`. The library `Lib` contract does not require testing as its functions are tested via the `HashMapI` contract. `HashMapITest` is only used as an intermediary contract to test the `HashMapI` contract functions. `SetupI` does not need to be tested as it only contains the initialisation parameters (constants) for the insurance pool ecosystem. Lastly, `NotificaitonI` is a contract with only one abstract function that does not need to be tested either.
+The three tests below are verifying the interface contracts `ExtAccessI`, `IntAccessI` and the `HashMapI`. The library `Lib` contract does not require testing as its functions are tested via the `HashMapI` contract. `HashMapITest` is only used as an intermediary contract to test the `HashMapI` contract functions. `SetupI` does not need to be tested as it only contains the initialisation parameters (constants) for the insurance pool ecosystem. Lastly, `NotificaitonI` is a contract with only one abstract function that does not need to be tested either.
 
 ```
 truffle(develop)> test test/component-tests/extAccessI.js
 Using network 'develop'.
 
   Contract: ExtAccessI
-    ✓ should deploy a new ExtAccessI contract and verify initialisation variables
+    ✓ should deploy a new ExtAccessI contract and verify initialization variables
     ✓ should add key 1 with transaction submitted by key 0
     ✓ should add key 2 with transaction submitted by key 1
     ✓ should perform pre-authorisation with key 1, add key 3 with transaction submitted by key 2
@@ -272,7 +272,7 @@ truffle(develop)> test test/component-tests/intAccessI.js
 Using network 'develop'.
 
   Contract: IntAccessI
-    ✓ should deploy a new IntAccessI contract and verify initialisation variables
+    ✓ should deploy a new IntAccessI contract and verify initialization variables
     ✓ should set and verify the remaining IntAccessI contract addresses
 
   2 passing (184ms)
@@ -296,17 +296,17 @@ Using network 'develop'.
 
 -----------------------
 
-## Developer tools used
+## Gratitude
 
-This insurance model and its corresponding smart contracts are written in the Solidity programming language intended to be deployed on the Ethereum ecosystem. All the test code and deployment scripts are written in JavaScript. For the development of this solution the developer tools [Visual Studio Code](https://code.visualstudio.com/), Testrpc and [Truffle](http://truffleframework.com) were used (thank you guys for building these amazing tools - you are the true heroes!). And of course, a huge thank you to the Core Devs for giving us Ethereum!
+This insurance model and its corresponding smart contracts are written in the Solidity programming language intended to be deployed on the Ethereum ecosystem. All the test code and deployment scripts are written in JavaScript. For the development of this solution the developer tools [Visual Studio Code](https://code.visualstudio.com/), Testrpc and [Truffle](http://truffleframework.com) were used. Thank you to everyone involved in building these amazing tools - you are true heroes my books!). And of course, a huge thank you to the Core Devs for giving us Ethereum!
 
 -----------------------
 
 ## A note about this code base
 
-The source code of the function `dailyOvernightProcessing()` in the **pool contract** has been removed from this code base and will be made public at a later stage. The reasoning for this decision is that this model's applicability and resilience needs to be simulated for the different insurance sectors (health, property, life, indemnity, etc.) first so that the correct set of Initialisation Constants (all 26 of them - see contract `SetupI.sol` file) can be chosen wisely.
+The source code of the function `dailyOvernightProcessing()` in the **pool contract** has been removed from this code base and will be made public at a later stage. The reasoning for this caution is that this model's applicability and resilience needs to be simulated for the different insurance sectors (health, property, life, indemnity, etc.) first so that the correct set of Initialization Constants (all 26 of them - see contract `SetupI.sol` file) can be chosen wisely.
 
-It is the perfect match of these configuration parameters and the model that will hopefully provide us with a fair, transparent and resilient insurance service. Given the nature the Blockchain ecosystem is in right now, I fear that this model could be 'applied' in a rush without having a solid understanding of an insurance use case (creating a significant risk of harming the entire p-to-p insurance ecosystem when one pool goes 'belly up').
+It is the perfect match of these configuration parameters and the model that will hopefully provide us with a fair, transparent and resilient insurance service. Given the state the Blockchain ecosystem is in right now, I fear that this model could be applied in a rush without having a solid understanding of an insurance use case (creating a significant risk of harming the entire p-to-p insurance ecosystem if one pool ends up going 'belly up').
 
 -----------------------
 

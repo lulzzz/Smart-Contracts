@@ -22,7 +22,7 @@ contract Settlement is SetupI, IntAccessI, HashMapI {
 
     struct SettlementData {
         // Index of this Settlement
-        uint settlementIdx;
+        uint idx;
         // The final OR anticipated settlement amount (if the settlement is not in an closed state this is the expected settlement amount)
         uint settlementAmount;
         // Different states a Settlement can be in 
@@ -71,7 +71,7 @@ contract Settlement is SetupI, IntAccessI, HashMapI {
         // Add the settlement data to the data storage
         dataStorage[settlementHash] = SettlementData({
             // Specify the hashMap.nextIdx as the index for this new settlement
-            settlementIdx: hashMap.nextIdx,
+            idx: hashMap.nextIdx,
             // The settlement amount
             settlementAmount: 0,
             // Set the settlement status to created

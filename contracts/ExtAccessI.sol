@@ -12,7 +12,7 @@ pragma solidity ^0.4.18;
 contract ExtAccessI {
 
     // Time duration pre-authorisation remains active in seconds
-    uint public constant PRE_AUTH_DURATION_SECONDS = 300;
+    uint public constant EXT_ACCESS_PRE_AUTH_DURATION_SEC = 5 minutes;
     
     // Storage mapping for 5 access keys (0, 1, 2, 3, 4)
     mapping(uint => address) private authKeys;
@@ -98,7 +98,7 @@ contract ExtAccessI {
         // Save the pre-authorisation key used
         preAuthKeyUsed = msg.sender;
         // Set the pre-authorisation expiry time
-        preAuthExpiry = PRE_AUTH_DURATION_SECONDS + now;
+        preAuthExpiry = EXT_ACCESS_PRE_AUTH_DURATION_SEC + now;
     }
 
     /**
@@ -123,6 +123,13 @@ contract ExtAccessI {
         
         // Check if not all key slots have already been filled
         require(authKeys[4] == address(0x0));
+
+        // Check if the address provided is not a contract address (must be an externally owned account)
+        uint size;
+        // Retrieve the size of the code that is stored against the provided address
+        assembly { size := extcodesize(_adr) }
+        // Ensure that the 'address size' is 0 (if the size is greater than 0 this address is owned by a contract)
+        require(size == 0);
 
         // Add the key to the first empty key slot
         if (authKeys[0] == address(0x0)) 

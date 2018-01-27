@@ -84,50 +84,47 @@ exports.addSettlementInfo = function(_settlementIdx, _adjustorIdx, _documentHash
 }
 
 // setExpectedSettlementAmount(bytes32 _settlementHash, bytes32 _adjustorHash, uint _expectedSettlementAmount) 
-exports.setExpectedSettlementAmount = function(_settlementIdx, _adjustorIdx, _amount_fc) {
+exports.setExpectedSettlementAmount = function(_settlementIdx, _adjustorIdx, _amount_cu) {
     var settlementData;
     var wc_locked_before;
     // Get the settlement details
     return td.settlement.dataStorage.call(td.sHash[_settlementIdx])
     .then(function (sData) {
         settlementData = sData;
-        return td.pool.WC_Locked_Fc.call();
+        return td.pool.WC_Locked_Cu.call();
     })
     .then(function (amount) {
         wc_locked_before = amount;
         // Set the expected settlement amount for the settlement
-        return td.settlement.setExpectedSettlementAmount(td.sHash[_settlementIdx], td.aHash[_adjustorIdx], _amount_fc, {from: td.accounts[_adjustorIdx]});
+        return td.settlement.setExpectedSettlementAmount(td.sHash[_settlementIdx], td.aHash[_adjustorIdx], _amount_cu, {from: td.accounts[_adjustorIdx]});
     })
     .then(function(tx) {
         return td.settlement.dataStorage.call(td.sHash[_settlementIdx]);
     })
     .then(function (sData) {
-        return miscFunc.verifySettlementData(sData, _settlementIdx, _amount_fc, null);
+        return miscFunc.verifySettlementData(sData, _settlementIdx, _amount_cu, null);
     })
     .then(function () {
-        return td.pool.WC_Locked_Fc.call();
+        return td.pool.WC_Locked_Cu.call();
     })
     .then(function (amount) {
-        // Calculate the new value for Wc_Locked_Fc in the pool (could have increased or decreased)
-        var wcLockedAmount_New = +wc_locked_before + (+_amount_fc - +settlementData[1].valueOf());
+        // Calculate the new value for Wc_Locked_Cu in the pool (could have increased or decreased)
+        var wcLockedAmount_New = +wc_locked_before + (+_amount_cu - +settlementData[1].valueOf());
         assert(wcLockedAmount_New, amount, "New value for Wc Locked Fc in the pool is invalid");
     });
 }
 
 // closeSettlement(bytes32 _settlementHash, bytes32 _adjustorHash, bytes32 _documentHash, uint _settlementAmount) 
-exports.closeSettlement = function(_settlementIdx, _adjustorIdx, _documentHash, _amount_fc) {
+exports.closeSettlement = function(_settlementIdx, _adjustorIdx, _documentHash, _amount_cu) {
     var settlementData;
     var wc_locked_before;
     var nextBankPaymentAdvice;
     var settlementHashMapInfo;
 
     // Get the payment advice details
-    return td.bank.paymentAdviceCountNextLast.call()
-    .then(function(paymentAdviceInfo) {
-        if (paymentAdviceInfo[0].valueOf() == 0)
-            nextBankPaymentAdvice = 0;
-        else nextBankPaymentAdvice = +paymentAdviceInfo[2].valueOf() + 1;
-
+    return td.bank.countPaymentAdviceEntries.call()
+    .then(function(count) {
+        nextBankPaymentAdvice = count.valueOf();
         // Retrieve the hash map info from the settlement firstIdx, nextIdx, count
         return td.settlement.hashMap.call();
     })
@@ -140,12 +137,12 @@ exports.closeSettlement = function(_settlementIdx, _adjustorIdx, _documentHash, 
     })
     .then(function (sData) {
         settlementData = sData;
-        return td.pool.WC_Locked_Fc.call();
+        return td.pool.WC_Locked_Cu.call();
     })
     .then(function (amount) {
         wc_locked_before = amount;
         // Close the settlement
-        return td.settlement.closeSettlement(td.sHash[_settlementIdx], td.aHash[_adjustorIdx], _documentHash, _amount_fc, {from: td.accounts[_adjustorIdx]});
+        return td.settlement.closeSettlement(td.sHash[_settlementIdx], td.aHash[_adjustorIdx], _documentHash, _amount_cu, {from: td.accounts[_adjustorIdx]});
     })
     .then(function(tx) {
         // Event is triggered as part of the settlement closure log[0]: Settlement event
@@ -161,13 +158,13 @@ exports.closeSettlement = function(_settlementIdx, _adjustorIdx, _documentHash, 
     })
     .then(function (sData) {
         // console.log('Settlement ' + _settlementIdx +':  ' + sData[1].valueOf());
-        return miscFunc.verifySettlementData(sData, _settlementIdx, _amount_fc, 2);
+        return miscFunc.verifySettlementData(sData, _settlementIdx, _amount_cu, 2);
     })
     .then(function () {
-        return td.pool.WC_Locked_Fc.call();
+        return td.pool.WC_Locked_Cu.call();
     })
     .then(function (amount) {
-        // Calculate the new value for Wc_Locked_Fc in the pool (could have increased or decreased)
+        // Calculate the new value for Wc_Locked_Cu in the pool (could have increased or decreased)
         var wcLockedAmount_New = +wc_locked_before - +settlementData[1].valueOf();
         // console.log(wcLockedAmount_New);
         assert.equal(wcLockedAmount_New, amount, "New value for Wc Locked Fc in the pool is invalid");
@@ -182,27 +179,25 @@ exports.closeSettlement = function(_settlementIdx, _adjustorIdx, _documentHash, 
 
         // Verify if a new bank payment advice has been created
         // If the payout amount is greater than 0 ensure a payment advice entry has been created
-        if (_amount_fc > 0) {
+        if (_amount_cu > 0) {
             // Verify if the newly created bank payment advice entry details are correct
             return td.bank.bankPaymentAdvice.call(nextBankPaymentAdvice);
         }
         else {
             // If payout amount is 0 ensure no new payment advice entry has been created
-            return td.bank.paymentAdviceCountNextLast.call();
+            return td.bank.countPaymentAdviceEntries.call();
         }
     })
     .then(function(details) {
-        if (_amount_fc > 0) {
+        if (_amount_cu > 0) {
             assert.equal(5, details[0].valueOf(), "Settlement payment advice type incorrect");
             assert.equal(setupI.SETTLEMENT_ACCOUNT_PAYMENT_HASH, details[1].valueOf(), "Settlement payment account hash recipient incorrect");
             assert.equal(td.sHash[_settlementIdx], details[2].valueOf(), "Settlement payment reference incorrect");
-            assert.equal(_amount_fc, details[3].valueOf(), "Payout amount is incorrect");
+            assert.equal(_amount_cu, details[3].valueOf(), "Payout amount is incorrect");
         }
         else {
             // No additinal (new) entry should have been created
-            if (nextBankPaymentAdvice == 0)
-                assert.equal(0, details[2].valueOf(), "No additional payment advice entry should have been created");
-            else assert.equal(nextBankPaymentAdvice, +details[2].valueOf() + 1, "No additional payment advice entry should have been created");
+            assert.equal(nextBankPaymentAdvice, details.valueOf(), "No additional payment advice entry should have been created");
         }
         return 0;
     });

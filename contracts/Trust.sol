@@ -76,15 +76,15 @@ contract Trust is IntAccessI, ExtAccessI {
         Pool(_poolAdr).initEcosystem(_isWinterTime);
     }
 
-    /**@dev Function overwrites the WC_Exp_Fc to use for next overnight processing.
+    /**@dev Function overwrites the WC_Exp_Cu to use for next overnight processing.
             Preauthorisation is required to perform this operation.
-     * @param _wcExpenses_Fc Total Expenses of the pool within the DURATION_WC_EXPENSE_HISTORY_SEC period
+     * @param _wcExpenses_Cu Total Expenses of the pool within the DURATION_WC_EXPENSE_HISTORY_SEC period
      */
-    function setWcExpenses(uint _wcExpenses_Fc)
+    function setWcExpenses(uint _wcExpenses_Cu)
         public
         isExtAuth
     {
-        Pool(getPoolAdr()).setWcExpenses(_wcExpenses_Fc);
+        Pool(getPoolAdr()).setWcExpenses(_wcExpenses_Cu);
 	}
 
     /**@dev Function needs to be called by the  pool owners to inform the pool about daylight saving and leap second adjustments
@@ -100,29 +100,29 @@ contract Trust is IntAccessI, ExtAccessI {
 
     /**@dev Creates an new adjustor with the requested details - can only be called by the Trust
      * @param _adjustorAdr Address/public key of the adjustor authorising the adjustor to submitt and process settlements
-     * @param _settlementApprovalAmount_Fc The amount this adjustor is authorised to process settlements
+     * @param _settlementApprovalAmount_Cu The amount this adjustor is authorised to process settlements
      * @param _policyRiskPointLimit The risk point limit this adjustor is authorised to underwrite policies
      * @param _serviceAgreementHash The hash of the new service agreement with the adjustor
      */
-    function createAdjustor(address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+    function createAdjustor(address _adjustorAdr, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
         public
         isExtAuth
     {
-        Adjustor(getAdjustorAdr()).createAdjustor(_adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreementHash);
+        Adjustor(getAdjustorAdr()).createAdjustor(_adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreementHash);
     }
 
     /**@dev Creates an new adjustor with the requested details - can only be called by the Trust
      * @param _adjustorHash Hash of the adjustor that needs to be updated
      * @param _adjustorAdr Address/public key of the adjustor authorising the adjustor to submitt and process settlements
-     * @param _settlementApprovalAmount_Fc The amount this adjustor is authorised to process settlements
+     * @param _settlementApprovalAmount_Cu The amount this adjustor is authorised to process settlements
      * @param _policyRiskPointLimit The risk point limit this adjustor is authorised to underwrite policies
      * @param _serviceAgreementHash The hash of the new service agreement with the adjustor
      */
-    function updateAdjustor(bytes32 _adjustorHash, address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+    function updateAdjustor(bytes32 _adjustorHash, address _adjustorAdr, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
         public
         isExtAuth
     {
-        Adjustor(getAdjustorAdr()).updateAdjustor(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreementHash);
+        Adjustor(getAdjustorAdr()).updateAdjustor(_adjustorHash, _adjustorAdr, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreementHash);
     }
 
     /**@dev Creates an new adjustor with the requested details - can only be called by the Trust

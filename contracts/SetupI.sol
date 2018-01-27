@@ -29,13 +29,13 @@ contract SetupI {
     uint public constant MAX_YIELD_PPB = 500000000;                     // (50 %)
 
     // Bond constants
-    uint public constant MIN_BOND_PRINCIPAL_FC = 10000;                 // ($ 100)
-    uint public constant MAX_BOND_PRINCIPAL_FC = 10000000;              // ($ 100.000,--)
+    uint public constant MIN_BOND_PRINCIPAL_CU = 10000;                 // ($ 100)
+    uint public constant MAX_BOND_PRINCIPAL_CU = 10000000;              // ($ 100.000,--)
     uint public constant BOND_REQUIRED_SECURITY_REFERENCE_PPT = 200;    // (20 %)
 
     // Policy constants
-    uint public constant MIN_POLICY_CREDIT_FC = 10000;                  // ($ 100)
-    uint public constant MAX_POLICY_CREDIT_FC = 5000000;                // ($ 50.000,--)
+    uint public constant MIN_POLICY_CREDIT_CU = 10000;                  // ($ 100)
+    uint public constant MAX_POLICY_CREDIT_CU = 5000000;                // ($ 50.000,--)
     uint public constant MAX_DURATION_POLICY_RECONCILIATION_DAYS = 100;
     uint public constant POLICY_RECONCILIATION_SAFETY_MARGIN = 3;
     uint public constant MIN_DURATION_POLICY_PAUSED_DAY = 1;

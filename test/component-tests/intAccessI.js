@@ -31,7 +31,7 @@ contract('IntAccessI', function(accounts) {
         return 1;
     }
 
-    it("should deploy a new IntAccessI contract and verify initialisation variables", function() {
+    it("should deploy a new IntAccessI contract and verify initialization variables", function() {
         // Deploy a new contract of IntAccessI and specify account[0] as the initial key to be added as the Deployment Controller address
         return abiIntAccI.new(accounts[0])
         .then(function(instance) {

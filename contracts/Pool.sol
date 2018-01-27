@@ -27,18 +27,18 @@ contract Pool is SetupI, IntAccessI, NotificationI {
     bool public daylightSavingScheduled = false;
 
     // Bank account balances
-    uint public WC_Bal_FA_Fc = 0;
-    uint public WC_Bal_BA_Fc = 0;
-    uint public WC_Bal_PA_Fc = 0;
+    uint public WC_Bal_FA_Cu = 0;
+    uint public WC_Bal_BA_Cu = 0;
+    uint public WC_Bal_PA_Cu = 0;
 
     // Variables used by the Insurance Pool during overnight processing only
     bool public overwriteWcExpenses = false;
-    uint public WC_Exp_Fc = 0;
+    uint public WC_Exp_Cu = 0;
 
     // Pool variables as defined in the model
-    uint public WC_Locked_Fc = 0;
-    uint public WC_Bond_Fc = 0;
-    uint public WC_Transit_Fc = 0;
+    uint public WC_Locked_Cu = 0;
+    uint public WC_Bond_Cu = 0;
+    uint public WC_Transit_Cu = 0;
     uint public B_Yield_Ppb = MIN_YIELD_PPB;
     uint public B_Gradient_Ppq = 0;
 
@@ -47,7 +47,7 @@ contract Pool is SetupI, IntAccessI, NotificationI {
     uint public bondYieldAccelerationThreshold = 0;
 
     // Events broadcasted by the Pool / Log events
-    event LogPool(bytes32 indexed subject, address indexed adr, bytes32 indexed info, uint timestamp);
+    event LogPool(bytes32 indexed subject, uint indexed day, uint indexed value, uint timestamp);
     
 
     /**@dev Constructor of the Pool.
@@ -80,9 +80,7 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         currentPoolDay--;
 
         // Add log entries
-        LogPool(bytes32("SetInitialProcessingTime"), address(initialProcessingStart), 0x0, now);
-        LogPool(bytes32("SetOvernightProcessingOffset"), address(POOL_DAILY_PROCESSING_OFFSET_SEC), 0x0, now);
-        LogPool(bytes32("SetCurrentDay"), address(currentPoolDay), 0x0, now);
+        LogPool(bytes32("SetInitialProcessingTime"), currentPoolDay, initialProcessingStart, now);
 
         // Schedule the pool's overnight processing
         Timer(getTimerAdr()).addNotification(
@@ -107,27 +105,27 @@ contract Pool is SetupI, IntAccessI, NotificationI {
     }
 
     /**@dev Function is called by the bond contract to submit a bond for signing
-     * @param _bondPrincipal_Fc The bond's principal amount requested for signing.
-     * @param _creditedBondAmount_Fc The pricipal amount that has already been paid by the bond owner
+     * @param _bondPrincipal_Cu The bond's principal amount requested for signing.
+     * @param _creditedBondAmount_Cu The pricipal amount that has already been paid by the bond owner
      * @return bondYield_Ppb The final yield approved by the pool for this bond
      */
-    function signBond(uint _bondPrincipal_Fc, uint _creditedBondAmount_Fc)
+    function signBond(uint _bondPrincipal_Cu, uint _creditedBondAmount_Cu)
         public
         isBondAuth
         returns (uint bondYield_Ppb)
     {
-        // Update the insurance pool variable WC_Bond_Fc by considering the newly issued bond
-        if (WC_Bond_Fc >= _bondPrincipal_Fc)
-            WC_Bond_Fc -= _bondPrincipal_Fc;
+        // Update the insurance pool variable WC_Bond_Cu by considering the newly issued bond
+        if (WC_Bond_Cu >= _bondPrincipal_Cu)
+            WC_Bond_Cu -= _bondPrincipal_Cu;
         else 
-            WC_Bond_Fc = 0;
+            WC_Bond_Cu = 0;
 
         // Add the corresponding transit amount if the credited amount so far is 0
-        if (_creditedBondAmount_Fc == 0)
-            WC_Transit_Fc += _bondPrincipal_Fc;
+        if (_creditedBondAmount_Cu == 0)
+            WC_Transit_Cu += _bondPrincipal_Cu;
         
         //  Calculate the new bond yield average
-        uint yieldAvg = ((B_Gradient_Ppq * _bondPrincipal_Fc) / (2 * (10**6)));
+        uint yieldAvg = ((B_Gradient_Ppq * _bondPrincipal_Cu) / (2 * (10**6)));
 
         // Calculate the new bond yield and ensure it is at least the MIN_YIELD value
         if (B_Yield_Ppb - yieldAvg > MIN_YIELD_PPB)
@@ -143,31 +141,31 @@ contract Pool is SetupI, IntAccessI, NotificationI {
     }
 
     /**@dev Finalises the Bond maturity processing - can only be called from the Bond contract
-     * @param _finalBondPayment_Fc The amount to be payed out to the owner of the Bond.
-     * @param _reduceWcTransit_Fc The amount to reduce WC transit.
+     * @param _finalBondPayment_Cu The amount to be payed out to the owner of the Bond.
+     * @param _reduceWcTransit_Cu The amount to reduce WC transit.
      */
-    function processMaturedBond(uint _finalBondPayment_Fc, uint _reduceWcTransit_Fc)
+    function processMaturedBond(uint _finalBondPayment_Cu, uint _reduceWcTransit_Cu)
         public
         isBondAuth
     {
-        // Reduce WC_Bal_BA_Fc - a check if sufficient funds are available are performed at the bond contract
-        WC_Bal_BA_Fc -= _finalBondPayment_Fc;
+        // Reduce WC_Bal_BA_Cu - a check if sufficient funds are available are performed at the bond contract
+        WC_Bal_BA_Cu -= _finalBondPayment_Cu;
         // Reduce WC_Transit by the transit amount
-        WC_Transit_Fc -= _reduceWcTransit_Fc; 
+        WC_Transit_Cu -= _reduceWcTransit_Cu; 
     }
 
     /**@dev Function is called when a credit of local currency has been credited to an insurance pool's bank account.
      * @param _accountType The bank account the deposit was credited to (0-PremiumAccount; 1-BondAccount; 2-FundingAccount)
      * @param _paymentAccountHash The payment hash of the sender details (account name and number) of the funds
      * @param _paymentSubject Payment particular/code/reference to be specified for the bank transaction
-     * @param _bankCreditAmount_Fc The amount that has been received at the bank.
+     * @param _bankCreditAmount_Cu The amount that has been received at the bank.
      * @return The result of the Credit operation: Is empty if successfull otherwise reason for failure.
      */
     function processAccountCredit(
         Lib.AccountType _accountType, 
         bytes32 _paymentAccountHash, 
         bytes32 _paymentSubject, 
-        uint _bankCreditAmount_Fc
+        uint _bankCreditAmount_Cu
         )
         public
         isBankAuth
@@ -180,7 +178,7 @@ contract Pool is SetupI, IntAccessI, NotificationI {
             // Verify if the payment has been received from the Premium holding account
             if (_paymentAccountHash == PREMIUM_ACCOUNT_PAYMENT_HASH) {
                 // Increase the balance in the Bond Account
-                WC_Bal_BA_Fc += _bankCreditAmount_Fc;
+                WC_Bal_BA_Cu += _bankCreditAmount_Cu;
                 // return success
                 return (true, 0x0, bytes32(getPoolAdr()));
             } else {
@@ -193,7 +191,7 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         // ******************************************************************************************
         } else if ((_paymentAccountHash == BOND_ACCOUNT_PAYMENT_HASH) && (_accountType == Lib.AccountType.FundingAccount)) {
             // If it is an overflow payment increase Funding account balance
-            WC_Bal_FA_Fc += _bankCreditAmount_Fc;
+            WC_Bal_FA_Cu += _bankCreditAmount_Cu;
             // return success
             return (true, 0x0, bytes32(getPoolAdr()));
         }
@@ -203,12 +201,12 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         // ******************************************************************************************
         if (_accountType == Lib.AccountType.PremiumAccount) {
             // Call the policy contract to process this credit
-            (success, info, internalReferenceHash) = Policy(getPolicyAdr()).processAccountCredit(_paymentAccountHash, _paymentSubject, _bankCreditAmount_Fc);
+            (success, info, internalReferenceHash) = Policy(getPolicyAdr()).processAccountCredit(_paymentAccountHash, _paymentSubject, _bankCreditAmount_Cu);
 
-            // If credit was successfull adjust WC_Bal_PA_Fc
+            // If credit was successfull adjust WC_Bal_PA_Cu
             if (info == 0x0) {
-                // Adjust WC_Bal_PA_Fc Funding Account
-                WC_Bal_PA_Fc += _bankCreditAmount_Fc;
+                // Adjust WC_Bal_PA_Cu Funding Account
+                WC_Bal_PA_Cu += _bankCreditAmount_Cu;
             }
             // Return the result of the policy credit payment
             return (success, info, internalReferenceHash); 
@@ -219,16 +217,16 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         } else if (_accountType == Lib.AccountType.FundingAccount) {
             bool reduceWcTransit = false;
             // Call the bond contract to process this credit
-            (success, info, internalReferenceHash, reduceWcTransit) = Bond(getBondAdr()).processAccountCredit(_paymentAccountHash, _paymentSubject, _bankCreditAmount_Fc, currentPoolDay);
+            (success, info, internalReferenceHash, reduceWcTransit) = Bond(getBondAdr()).processAccountCredit(_paymentAccountHash, _paymentSubject, _bankCreditAmount_Cu, currentPoolDay);
 
-            // If credit was successfull adjust WC_Transit_Fc and WC_Bal_FA_Fc
+            // If credit was successfull adjust WC_Transit_Cu and WC_Bal_FA_Cu
             if (info == 0x0) {
-                // Adjust WC_Bal_FA_Fc Funding Account
-                WC_Bal_FA_Fc += _bankCreditAmount_Fc;
+                // Adjust WC_Bal_FA_Cu Funding Account
+                WC_Bal_FA_Cu += _bankCreditAmount_Cu;
 
-                // Verify if WC_Transit_Fc needs to be adjusted (reduced)
+                // Verify if WC_Transit_Cu needs to be adjusted (reduced)
                 if (reduceWcTransit == true)
-                    WC_Transit_Fc -= _bankCreditAmount_Fc;
+                    WC_Transit_Cu -= _bankCreditAmount_Cu;
             }
             // Return the result of the bond credit payment
             return (success, info, internalReferenceHash);
@@ -251,7 +249,7 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         returns (uint)
     {
         // Only accellerate the yield if the WC Bond on sale is more than 10% of the daily expenses
-        if (WC_Bond_Fc > bondYieldAccelerationThreshold) {
+        if (WC_Bond_Cu > bondYieldAccelerationThreshold) {
             // Increase the yield on offer for bonds
             B_Yield_Ppb = ((B_Yield_Ppb * (10**9 + YAC_PER_INTERVAL_PPB)) / (10**9));
             // Yield has exceeded the max yield
@@ -273,20 +271,20 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         }
     }
 
-    /**@dev Function overwrites the WC_Exp_Fc to use for next overnight processing.
+    /**@dev Function overwrites the WC_Exp_Cu to use for next overnight processing.
             Preauthorisation is required to perform this operation.
-     * @param _wcExpenses_Fc Total Expenses of the pool within the DURATION_WC_EXPENSE_HISTORY_DAYS period
+     * @param _wcExpenses_Cu Total Expenses of the pool within the DURATION_WC_EXPENSE_HISTORY_DAYS period
      */
-    function setWcExpenses(uint _wcExpenses_Fc)
+    function setWcExpenses(uint _wcExpenses_Cu)
         public
         isTrustAuth
     {
         // Set the value to use for WC Expenses for next overnight processing
-        WC_Exp_Fc = _wcExpenses_Fc;
+        WC_Exp_Cu = _wcExpenses_Cu;
         // Set the flag that wc expenses has been overwritten
         overwriteWcExpenses = true;
         // Add log entry
-        LogPool(bytes32("WcExpensesAdjustmentFc"), address(currentPoolDay), bytes32(_wcExpenses_Fc), now);
+        LogPool(bytes32("WcExpensesAdjustmentCu"), currentPoolDay, _wcExpenses_Cu, now);
 	}
 
     /**@dev Function needs to be called by the  pool owners to inform the pool about daylight saving and leap second adjustments
@@ -302,22 +300,22 @@ contract Pool is SetupI, IntAccessI, NotificationI {
         daylightSavingScheduled = true;
         // Create a log entry to document the change
         if (isWinterTime == true)
-            LogPool(bytes32("ChangeToSummerTime"), address(this), 0x0, now);
+            LogPool(bytes32("ChangeToSummerTime"), currentPoolDay, 0, now);
         else 
-            LogPool(bytes32("ChangeToWinterTime"), address(this), 0x0, now);
+            LogPool(bytes32("ChangeToWinterTime"), currentPoolDay, 0, now);
 	}
 
     /**@dev Function can only be called by the Settlement contract to adjust the WC Locked amount.
      */
-    function adjustWcLocked(uint amount_fc, bool addAmount)
+    function adjustWcLocked(uint amount, bool addAmount)
         public
         isSettlementAuth
     {
         if (addAmount == true) {
-            // Inrease the Wc_Locked_Fc
-            WC_Locked_Fc += amount_fc;
+            // Inrease the Wc_Locked_Cu
+            WC_Locked_Cu += amount;
         } else {
-            WC_Locked_Fc -= amount_fc;
+            WC_Locked_Cu -= amount;
         }
 	}
 
