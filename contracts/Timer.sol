@@ -17,7 +17,7 @@ contract Timer is IntAccessI {
     // The inception date of this contract
     uint public TIMER_INCEPTION_DATE;
     // Store the time ping was executed the last time (in 10 seconds intervalls)
-    uint public nextPingExec_10_S = now / 10;
+    uint public lastPingExec_10_S = now / 10;
 
     // Struct to store the notifications in
     struct NotificationEntry {
@@ -73,15 +73,15 @@ contract Timer is IntAccessI {
         uint timeNow_10_S = now / 10;
 
         // 100 second loop interation
-        for (uint i_100_S = nextPingExec_10_S / 10; i_100_S <= timeNow_10_S / 10; i_100_S++) {
+        for (uint i_100_S = lastPingExec_10_S / 10; i_100_S <= timeNow_10_S / 10; i_100_S++) {
             // Verify it this intervall has entries
             if (timeIntervalHasEntries[i_100_S] == true) {
                 // Iterate throught the 10 slots within this 100 second itervall
                 for (uint j_10_S = i_100_S * 10; j_10_S < (i_100_S + 1) * 10 ; j_10_S++) {
                     // Verify if the selected 10 second time slot is within
-                    //    => the lower or equal bound of nextPingExec_10_S and 
+                    //    => the lower or equal bound of lastPingExec_10_S and 
                     //    => the higher or equal bound of timeNow_10_S
-                    if ((j_10_S >= nextPingExec_10_S) && (j_10_S <= timeNow_10_S)) {
+                    if ((j_10_S >= lastPingExec_10_S) && (j_10_S <= timeNow_10_S)) {
                         // Iterate through every entry in a slot
                         for (uint k=0; k<notification[j_10_S].length; k++) {
                             // Invoke the ping notification using the contracts address
@@ -107,7 +107,7 @@ contract Timer is IntAccessI {
             }
         }
         // Set the next ping execution timeslot timeNow_10_S + 1
-        nextPingExec_10_S = timeNow_10_S + 1;
+        lastPingExec_10_S = timeNow_10_S + 1;
     }
 
     /**@dev Returns the number of scheduled ping notifications for the specified timestamp period
@@ -140,6 +140,6 @@ contract Timer is IntAccessI {
     function manualPing(address _pingAdr, uint8 _subject, bytes32 _message, uint _scheduledDateTime) public {
         NotificationI(_pingAdr).ping(_subject, _message, _scheduledDateTime);
         // Set the next ping execution to now
-        nextPingExec_10_S = now / 10;
+        lastPingExec_10_S = now / 10;
     }
 }

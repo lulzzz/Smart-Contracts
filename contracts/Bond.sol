@@ -22,20 +22,20 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
 
     struct BondData {
         // Index of this Bond
-        uint bondIdx;
+        uint idx;
         // Access key / password of the Bond owner
-        address bondOwnerAdr;
+        address owner;
         // Bank payment hash as provided by the bank
         bytes32 paymentAccountHash;
 
         // Variables for the bond as per whitepaper
-        uint principal_Fc;
+        uint principal_Cu;
         uint yield_Ppb;
-        uint maturityPayoutAmount_Fc;
+        uint maturityPayoutAmount_Cu;
         
         // DateTime stamps for the bond
-        uint bondCreationDate;
-        uint nextBondStateExpiryDate;
+        uint creationDate;
+        uint nextStateExpiryDate;
         uint maturityDate;
         
         // Different states a Bond can be in 
@@ -43,7 +43,7 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
 
         // Used to store:  => the address of the bond that was used as a security this bond if applicable
         //                 => AND the address of another bond this bond acts a security for.
-        bytes32 bondSecurityReferenceHash;
+        bytes32 securityReferenceHash;
     }
 
     // Storage mapping for all the bond data Hash of the Bond points to its data
@@ -61,22 +61,25 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
     function Bond(address _trustAdr) IntAccessI(_trustAdr) public {
     }
 
-    /**@dev Creates an new bond with the requested principal amount in a created state
-     * @param _principal_Fc The principal amount of the Bond.
+    /**@dev Creates an new bond with the requested principal amount in a created state. The transaction (msg.sender) must be an externally owned account (not a contract address)
+     * @param _principal_Cu The principal amount of the Bond.
      * @param _hashOfReferenceBond Optional parameter with the hash of an existing bond owned by the same person who is submitting this transaction
      */
-    function createBond(uint _principal_Fc, bytes32 _hashOfReferenceBond) public {
+    function createBond(uint _principal_Cu, bytes32 _hashOfReferenceBond) 
+        public 
+        isNotContractAdr(msg.sender)
+    {
         // Ensure bond principal is in between the min and max boundaries
-        require(_principal_Fc >= MIN_BOND_PRINCIPAL_FC);
-        require(_principal_Fc <= MAX_BOND_PRINCIPAL_FC);
+        require(_principal_Cu >= MIN_BOND_PRINCIPAL_CU);
+        require(_principal_Cu <= MAX_BOND_PRINCIPAL_CU);
 
         // Ensure sufficient IPBs are avaialble for the new bond (this is only a preliminary check)
-        require(_principal_Fc <= Pool(getPoolAdr()).WC_Bond_Fc());
+        require(_principal_Cu <= Pool(getPoolAdr()).WC_Bond_Cu());
 
         // In case a hash to provide a security for the newly created bond is provided verify if it is a valid bond
         if (_hashOfReferenceBond != 0x0) {
             // Ensure the sender of the transaction is the owner of the bond that is providing the security
-            require(dataStorage[_hashOfReferenceBond].bondOwnerAdr == msg.sender);
+            require(dataStorage[_hashOfReferenceBond].owner == msg.sender);
 
             // Ensure the bond providing the security is in an issued state
             require(dataStorage[_hashOfReferenceBond].state == Lib.BondState.Issued);
@@ -85,7 +88,7 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             require(dataStorage[_hashOfReferenceBond].maturityDate > now + DURATION_BOND_LOCK_NEXT_STATE_SEC);
             
             // Ensure that the principal of the bond providing the underwriting is sufficient to provide underwriting for the specified bond
-            require(((_principal_Fc * BOND_REQUIRED_SECURITY_REFERENCE_PPT) / 10**3) <= dataStorage[_hashOfReferenceBond].principal_Fc);
+            require(((_principal_Cu * BOND_REQUIRED_SECURITY_REFERENCE_PPT) / 10**3) <= dataStorage[_hashOfReferenceBond].principal_Cu);
         }
 
         // *************************************
@@ -98,23 +101,23 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
         // Add the bond data to the data storage
         dataStorage[bondHash] = BondData({
             // Specify the hashMap.nextIdx as the index for this new bond
-            bondIdx: hashMap.nextIdx,
+            idx: hashMap.nextIdx,
             // Save the address of the bond's owner
-            bondOwnerAdr: msg.sender,
+            owner: msg.sender,
             // Set the bond principal amount
-            principal_Fc: _principal_Fc,
+            principal_Cu: _principal_Cu,
             // Set the creation date to now
-            bondCreationDate: now,
+            creationDate: now,
             // Set the timestamp for expiry of bond being in an underwritten state
-            nextBondStateExpiryDate: now + DURATION_BOND_LOCK_NEXT_STATE_SEC,
+            nextStateExpiryDate: now + DURATION_BOND_LOCK_NEXT_STATE_SEC,
             // Set the bonds status to created
             state: Lib.BondState.Created,
             // Set the remaining bond variables to 0 or 0x0
             maturityDate: 0,
             paymentAccountHash: bytes32(0x0),
             yield_Ppb: 0,
-            maturityPayoutAmount_Fc: 0,
-            bondSecurityReferenceHash: bytes32(0x0)
+            maturityPayoutAmount_Cu: 0,
+            securityReferenceHash: bytes32(0x0)
         });
 
         // Add the bond to the Hash map
@@ -124,7 +127,7 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
         setScheduleMaturityEvent(bondHash);
 
         // Add log entry to document creation of bond
-        LogBond(bondHash, msg.sender, bytes32(_principal_Fc), now, uint(dataStorage[bondHash].state));
+        LogBond(bondHash, msg.sender, bytes32(_principal_Cu), now, uint(dataStorage[bondHash].state));
 
 
         // *************************************
@@ -139,21 +142,21 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             dataStorage[bondHash].state = Lib.BondState.SecuredReferenceBond;
 
             // Set the cross-references of the bonds
-            dataStorage[_hashOfReferenceBond].bondSecurityReferenceHash = bondHash;
-            dataStorage[bondHash].bondSecurityReferenceHash = _hashOfReferenceBond;
+            dataStorage[_hashOfReferenceBond].securityReferenceHash = bondHash;
+            dataStorage[bondHash].securityReferenceHash = _hashOfReferenceBond;
 
             // Create log entries
-            LogBond(_hashOfReferenceBond, dataStorage[_hashOfReferenceBond].bondOwnerAdr, bondHash, now, uint(dataStorage[_hashOfReferenceBond].state));
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, _hashOfReferenceBond, now, uint(dataStorage[bondHash].state));
+            LogBond(_hashOfReferenceBond, dataStorage[_hashOfReferenceBond].owner, bondHash, now, uint(dataStorage[_hashOfReferenceBond].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, _hashOfReferenceBond, now, uint(dataStorage[bondHash].state));
 
             // Submitt the bond for signing by the pool and get bond yield
-            dataStorage[bondHash].yield_Ppb = Pool(getPoolAdr()).signBond(_principal_Fc, 0);
+            dataStorage[bondHash].yield_Ppb = Pool(getPoolAdr()).signBond(_principal_Cu, 0);
 
             // Change the bond's status to Signed
             dataStorage[bondHash].state = Lib.BondState.Signed;
 
             // Create log entries
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32(dataStorage[bondHash].yield_Ppb), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32(dataStorage[bondHash].yield_Ppb), now, uint(dataStorage[bondHash].state));
         }
     }
 
@@ -161,16 +164,16 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             has been credited to the insurance pool's Funding Account.
      * @param _paymentAccountHash The payment account hash of the sender used for this bank payment.
      * @param _paymentSubject Payment particular/code/reference to be specified for the bank transaction (must be equal to the bond hash)
-     * @param _creditAmount_Fc The principal amount that has been credited to the Funding Account.
+     * @param _creditAmount_Cu The principal amount that has been credited to the Funding Account.
      * @return info describing an unsuccessfull funding otherwise empty (0x0)
      */
-    function processAccountCredit(bytes32 _paymentAccountHash, bytes32 _paymentSubject, uint _creditAmount_Fc, uint _currentPoolDay)
+    function processAccountCredit(bytes32 _paymentAccountHash, bytes32 _paymentSubject, uint _creditAmount_Cu, uint _currentPoolDay)
         public
         isIntAuth
         returns (bool success, bytes32 info, bytes32 bondHash, bool reduceWcTransit)
     {
         // Verify if the paymentSubject provided matches the any of the Bond hashes
-        if (dataStorage[_paymentSubject].bondOwnerAdr != 0x0)
+        if (dataStorage[_paymentSubject].owner != 0x0)
             bondHash = _paymentSubject;
         else 
             return (false, bytes32("PaymentSubject"), 0x0, false);
@@ -181,23 +184,23 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             (dataStorage[bondHash].state != Lib.BondState.Signed)) 
         {
             // Add log entry as bond is in invalid state
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32("BondState"), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32("BondState"), now, uint(dataStorage[bondHash].state));
             // Return the bond is in an invalid State 'BondState'
             return (false, bytes32("BondState"), bondHash, false);
         }
 
         // Verify the credit has been made within the next state expiry time frame
-        if (dataStorage[bondHash].nextBondStateExpiryDate < now) {
+        if (dataStorage[bondHash].nextStateExpiryDate < now) {
             // Add log entry as credit has been made too late
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32("ExpiryDate"), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32("ExpiryDate"), now, uint(dataStorage[bondHash].state));
             // Return the bond is in an invalid State 'BondState'
             return (false, bytes32("ExpiryDate"), bondHash, false);
         }
 
         // Verify the credited amount is the correct amount
-        if (dataStorage[bondHash].principal_Fc != _creditAmount_Fc) {
+        if (dataStorage[bondHash].principal_Cu != _creditAmount_Cu) {
             // Add log entry
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32("CreditAmount"), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32("CreditAmount"), now, uint(dataStorage[bondHash].state));
             // return subject
             return (false, bytes32("CreditAmount"), bondHash, false);
         }
@@ -209,53 +212,53 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             // Change bond status
             dataStorage[bondHash].state = Lib.BondState.SecuredBondPrincipal;
             // Create log entry
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32(_creditAmount_Fc), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32(_creditAmount_Cu), now, uint(dataStorage[bondHash].state));
             
             // Submitt the bond for signing by the pool and get bond yield
-            dataStorage[bondHash].yield_Ppb = Pool(getPoolAdr()).signBond(_creditAmount_Fc, _creditAmount_Fc);
+            dataStorage[bondHash].yield_Ppb = Pool(getPoolAdr()).signBond(_creditAmount_Cu, _creditAmount_Cu);
             // Change the bond's status to Signed
             dataStorage[bondHash].state = Lib.BondState.Signed;
             // Create log entry
-            LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32(dataStorage[bondHash].yield_Ppb), now, uint(dataStorage[bondHash].state));
+            LogBond(bondHash, dataStorage[bondHash].owner, bytes32(dataStorage[bondHash].yield_Ppb), now, uint(dataStorage[bondHash].state));
         
         } else {
             // Bond is in "Signed" state (Bond was secured with a reference Bond) => Pool is expecting a payment (i.e. WcTransit has to be reduced)
             reduceWcTransit = true;
             // Get the reference bond Hash that performed the security
-            bytes32 refBondHash = dataStorage[bondHash].bondSecurityReferenceHash;
+            bytes32 refBondHash = dataStorage[bondHash].securityReferenceHash;
             // Remove the security liablity
-            dataStorage[refBondHash].bondSecurityReferenceHash = 0x0;
+            dataStorage[refBondHash].securityReferenceHash = 0x0;
             // Change the state of the security bond back to issued
             dataStorage[refBondHash].state = Lib.BondState.Issued;
             // Add log entry for underwriting bond
-            LogBond(refBondHash, dataStorage[refBondHash].bondOwnerAdr, bytes32(dataStorage[refBondHash].maturityDate), now, uint(dataStorage[refBondHash].state));
+            LogBond(refBondHash, dataStorage[refBondHash].owner, bytes32(dataStorage[refBondHash].maturityDate), now, uint(dataStorage[refBondHash].state));
 
             // Remove the underwriting bond's reference
-            dataStorage[bondHash].bondSecurityReferenceHash = 0x0;
+            dataStorage[bondHash].securityReferenceHash = 0x0;
         }
 
         // Remove the bond's next phase expiry date
-        dataStorage[bondHash].nextBondStateExpiryDate = 0;
+        dataStorage[bondHash].nextStateExpiryDate = 0;
         // Save the payment hash
         dataStorage[bondHash].paymentAccountHash = _paymentAccountHash;
         // Change the Bond's state to issued
         dataStorage[bondHash].state = Lib.BondState.Issued;
         
         // Calculate the preliminary BondMaturityPayoutAmount
-        dataStorage[bondHash].maturityPayoutAmount_Fc = dataStorage[bondHash].principal_Fc + 
-            (dataStorage[bondHash].principal_Fc * dataStorage[bondHash].yield_Ppb / 10**9);
+        dataStorage[bondHash].maturityPayoutAmount_Cu = dataStorage[bondHash].principal_Cu + 
+            (dataStorage[bondHash].principal_Cu * dataStorage[bondHash].yield_Ppb / 10**9);
 
         // Calculate the day this bond matures
         uint maturityDay = _currentPoolDay + (DURATION_TO_BOND_MATURITY_SEC / 1 days);
 
         // Add the bond's maturity payout amount for the maturity day
-        bondMaturityPayoutAmount[maturityDay] += dataStorage[bondHash].maturityPayoutAmount_Fc;
+        bondMaturityPayoutAmount[maturityDay] += dataStorage[bondHash].maturityPayoutAmount_Cu;
 
         // Set and schedule the final bond maturity event notification
         setScheduleMaturityEvent(bondHash);
 
         // Add log entry
-        LogBond(bondHash, dataStorage[bondHash].bondOwnerAdr, bytes32(dataStorage[bondHash].maturityDate), now, uint(dataStorage[bondHash].state));
+        LogBond(bondHash, dataStorage[bondHash].owner, bytes32(dataStorage[bondHash].maturityDate), now, uint(dataStorage[bondHash].state));
         // Return empty subject as successfull
         return (true, 0x0, bondHash, reduceWcTransit);
     }
@@ -278,33 +281,33 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             return 0;
 
         // Set the payout amount to the previously calculated maturity payout amount for the bond
-        uint payoutAmount_Fc = dataStorage[_bondHash].maturityPayoutAmount_Fc;
-        // Set the transitAmount_Fc if the Bond is 'Signed' state
-        uint reduceWcTransitAmount_Fc = (dataStorage[_bondHash].state == Lib.BondState.Signed ? 
-            dataStorage[_bondHash].principal_Fc : 0);
+        uint payoutAmount_Cu = dataStorage[_bondHash].maturityPayoutAmount_Cu;
+        // Set the transitAmount_Cu if the Bond is 'Signed' state
+        uint reduceWcTransitAmount_Cu = (dataStorage[_bondHash].state == Lib.BondState.Signed ? 
+            dataStorage[_bondHash].principal_Cu : 0);
         // Variable to store the penalty amount if bond is in a LockedReferenceBond state
-        uint penaltyAmount_Fc = 0;
+        uint penaltyAmount_Cu = 0;
 
         // Calculate the penalty amount in case the Bond is 'LockedReferenceBond'
         if (dataStorage[_bondHash].state == Lib.BondState.LockedReferenceBond) {
             // Get the reference bond Hash that performed the underwriting
-            bytes32 refBondHash = dataStorage[_bondHash].bondSecurityReferenceHash;
+            bytes32 refBondHash = dataStorage[_bondHash].securityReferenceHash;
             // Calculate the penalty amount
-            penaltyAmount_Fc = (dataStorage[refBondHash].principal_Fc * BOND_REQUIRED_SECURITY_REFERENCE_PPT) / 10**3;
+            penaltyAmount_Cu = (dataStorage[refBondHash].principal_Cu * BOND_REQUIRED_SECURITY_REFERENCE_PPT) / 10**3;
         }
 
-        // Calculate the final maturityPayoutAmount_Fc
-        dataStorage[_bondHash].maturityPayoutAmount_Fc = payoutAmount_Fc - penaltyAmount_Fc;
+        // Calculate the final maturityPayoutAmount_Cu
+        dataStorage[_bondHash].maturityPayoutAmount_Cu = payoutAmount_Cu - penaltyAmount_Cu;
 
         // If the maturity payout amount is greater than 0 then create a bank payment advice
-        if (dataStorage[_bondHash].maturityPayoutAmount_Fc > 0) {
+        if (dataStorage[_bondHash].maturityPayoutAmount_Cu > 0) {
             // Create payment instruction for the bank
             Bank(getBankAdr()).createPaymentAdvice(Lib.PaymentAdviceType.BondMaturity, 
-                dataStorage[_bondHash].paymentAccountHash, _bondHash, dataStorage[_bondHash].maturityPayoutAmount_Fc, _bondHash);
+                dataStorage[_bondHash].paymentAccountHash, _bondHash, dataStorage[_bondHash].maturityPayoutAmount_Cu, _bondHash);
         }
 
         // Call the pool and update the bank and transit balances if applicable
-        Pool(getPoolAdr()).processMaturedBond(dataStorage[_bondHash].maturityPayoutAmount_Fc, reduceWcTransitAmount_Fc);
+        Pool(getPoolAdr()).processMaturedBond(dataStorage[_bondHash].maturityPayoutAmount_Cu, reduceWcTransitAmount_Cu);
         
         // Change the bond's status
         if (dataStorage[_bondHash].state == Lib.BondState.Issued)
@@ -313,7 +316,7 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
             dataStorage[_bondHash].state = Lib.BondState.Defaulted;
         
         // Add log entry
-        LogBond(_bondHash, dataStorage[_bondHash].bondOwnerAdr, bytes32(dataStorage[_bondHash].maturityPayoutAmount_Fc), now, uint(dataStorage[_bondHash].state));
+        LogBond(_bondHash, dataStorage[_bondHash].owner, bytes32(dataStorage[_bondHash].maturityPayoutAmount_Cu), now, uint(dataStorage[_bondHash].state));
         
         // Archive the bond
         hashMap.archive(_bondHash);
@@ -329,27 +332,27 @@ contract Bond is SetupI, IntAccessI, NotificationI, HashMapI {
     /**@dev Calculates and returns the bond payout amounts for all the bonds when they mature.
      * @param _beginDay The starting day (currentPoolDay) to start adding the bond maturity amounts
      * @param _endDay The last day to add the the bond maturity aount for
-     * @return bondMaturityPayoutAmountNext3Days_Fc Total amount of expected bond payouts for today, tomorrow and the day after tomorrow.
-     * @return bondMaturityPayoutFuturePerDay_Fc Total amount of expected bond payouts in the future on a per day basis
+     * @return bondMaturityPayoutAmountNext3Days_Cu Total amount of expected bond payouts for today, tomorrow and the day after tomorrow.
+     * @return bondMaturityPayoutFuturePerDay_Cu Total amount of expected bond payouts in the future on a per day basis
      */
     function getBondMaturityPayouts(uint _beginDay, uint _endDay)
         public
         constant
-        returns (uint bondMaturityPayoutAmountNext3Days_Fc, uint bondMaturityPayoutFuturePerDay_Fc)
+        returns (uint bondMaturityPayoutAmountNext3Days_Cu, uint bondMaturityPayoutFuturePerDay_Cu)
     {
         // Iterate through the hash mapping of all bonds between the first and the last idx
         for (uint i = _beginDay; i<=_endDay; i++) {
-            bondMaturityPayoutFuturePerDay_Fc += bondMaturityPayoutAmount[i];
+            bondMaturityPayoutFuturePerDay_Cu += bondMaturityPayoutAmount[i];
         }
 
         // Calculate the combined bond maturity payout amounts for today, tomorrow and the day after tomorrow
-        bondMaturityPayoutAmountNext3Days_Fc = bondMaturityPayoutAmount[_beginDay] + bondMaturityPayoutAmount[_beginDay + 1] + bondMaturityPayoutAmount[_beginDay + 2];
+        bondMaturityPayoutAmountNext3Days_Cu = bondMaturityPayoutAmount[_beginDay] + bondMaturityPayoutAmount[_beginDay + 1] + bondMaturityPayoutAmount[_beginDay + 2];
         
         // Calculate the bond maturity payouts for the future on a per day basis
-        bondMaturityPayoutFuturePerDay_Fc /= (_endDay - _beginDay);
+        bondMaturityPayoutFuturePerDay_Cu /= (_endDay - _beginDay);
 
         // Return the 
-        return (bondMaturityPayoutAmountNext3Days_Fc, bondMaturityPayoutFuturePerDay_Fc);
+        return (bondMaturityPayoutAmountNext3Days_Cu, bondMaturityPayoutFuturePerDay_Cu);
     }
 
     /**@dev Calculates the maturity time for the bond and schedules a ping notification

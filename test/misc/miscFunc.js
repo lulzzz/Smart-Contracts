@@ -207,11 +207,21 @@ exports.getBondMaturityPaymentsAveragePerDay = function() {
 
 // Returns a single requested value from the event log files as specified by the parameters provided
 exports.eventLog = function(contract, tx, logNr, idx) {
-    // POOL and Bank
-    // event LogPool (bytes32 indexed subject, address indexed adr, bytes32 indexed info, uint timestamp);
+    // POOL
+    // event LogPool(bytes32 indexed subject, uint indexed day, uint indexed value, uint timestamp);
+    // idx                           0                        1                    2          3  
+    if (contract == 'Pool')
+    {
+        if (idx == 0) return tx.receipt.logs[logNr].topics[1];                                      // bytes32 subject
+        if (idx == 1) return parseInt(tx.receipt.logs[logNr].topics[2]);                            // uint day
+        if (idx == 2) return parseInt(tx.receipt.logs[logNr].topics[3]);                            // uint value
+        if (idx == 3) return tx.receipt.logs[logNr].data.slice(2 + 0 * 64, 2 + 1 * 64).valueOf();   // uint timestamp
+    }
+
+    // TRUST
     // event LogTrust(bytes32 indexed subject, address indexed adr, bytes32 indexed info, uint timestamp);
     // idx                           0                        1                    2          3  
-    if ((contract == 'Pool') || (contract == 'Trust'))
+    else if (contract == 'Trust')
     {
         if (idx == 0) return tx.receipt.logs[logNr].topics[1];                                      // bytes32 subject
         if (idx == 1) return tx.receipt.logs[logNr].topics[2];                                      // address adr
@@ -288,38 +298,38 @@ exports.verifyAllContractReferenceAdr = function(idx, contractAdrMsg, poolAdrRef
 }
 
 // Function verifies if the data in _bData matches the other parameter if they are provided
-exports.verifyBondData = function(_bData, _bondIdx, _bondOwnerAdr, _paymentAccountHash, _principal_Fc, 
-    _yield_Ppb, _maturityPayoutAmount_Fc, _bondCreationDate,
-    _nextBondStateExpiryDate, _maturityDate, _state, _bondSecurityReferenceHash) 
+exports.verifyBondData = function(_bData, _idx, _owner, _paymentAccountHash, _principal_Cu, 
+    _yield_Ppb, _maturityPayoutAmount_Cu, _creationDate,
+    _nextStateExpiryDate, _maturityDate, _state, _securityReferenceHash) 
 {
     // If a parameter has been provided verify it matches _bData
-    if (_bondIdx != null) assert.equal(_bData[0].valueOf(), _bondIdx, 'Bond index specified is invalid');
-    if (_bondOwnerAdr != null) assert.equal(_bData[1].valueOf(), _bondOwnerAdr, 'Bond onwer specified is invalid');
+    if (_idx != null) assert.equal(_bData[0].valueOf(), _idx, 'Bond index specified is invalid');
+    if (_owner != null) assert.equal(_bData[1].valueOf(), _owner, 'Bond onwer specified is invalid');
     if (_paymentAccountHash != null) assert.equal(_bData[2].valueOf(), _paymentAccountHash, 'Payment account hash specified is invalid');
-    if (_principal_Fc != null) assert.equal(_bData[3].valueOf(), _principal_Fc, 'Principal specified is invalid');
+    if (_principal_Cu != null) assert.equal(_bData[3].valueOf(), _principal_Cu, 'Principal specified is invalid');
     if (_yield_Ppb != null) assert.equal(_bData[4].valueOf(), _yield_Ppb, 'Yield specified is invalid');
-    if (_maturityPayoutAmount_Fc != null) assert.equal(_bData[5].valueOf(), _maturityPayoutAmount_Fc, 'Maturity payout amount specified is invalid');
-    if (_bondCreationDate != null) assert.equal(_bData[6].valueOf(), _bondCreationDate, 'Bond creation date specified is invalid');
-    if (_nextBondStateExpiryDate != null) assert.equal(_bData[7].valueOf(), _nextBondStateExpiryDate, 'Next step expiry date specified is invalid');
+    if (_maturityPayoutAmount_Cu != null) assert.equal(_bData[5].valueOf(), _maturityPayoutAmount_Cu, 'Maturity payout amount specified is invalid');
+    if (_creationDate != null) assert.equal(_bData[6].valueOf(), _creationDate, 'Bond creation date specified is invalid');
+    if (_nextStateExpiryDate != null) assert.equal(_bData[7].valueOf(), _nextStateExpiryDate, 'Next step expiry date specified is invalid');
     if (_maturityDate != null) assert.equal(_bData[8].valueOf(), _maturityDate, 'Bond maturity date specified is invalid');
     if (_state != null) assert.equal(_bData[9].valueOf(), _state, 'Bond state specified is invalid');
-    if (_bondSecurityReferenceHash != null) assert.equal(_bData[10].valueOf(), _bondSecurityReferenceHash, 'Bond security reference hash specified is invalid');
+    if (_securityReferenceHash != null) assert.equal(_bData[10].valueOf(), _securityReferenceHash, 'Bond security reference hash specified is invalid');
     // Return dummy value to be awaited
     return 0;
 }
 
 // Function verifies if the data in _pData matches the other parameter if they are provided
-exports.verifyPolicyData = function(_pData, _policyIdx, _policyOwnerAdr, _paymentAccountHash, _policyDocumentHash, 
-    _policyRiskPoints, _premiumCredited_Fc, _premiumCharged_Fc_Ppt, _state, _lastReconciliationDay, _nextReconciliationDay) 
+exports.verifyPolicyData = function(_pData, _idx, _owner, _paymentAccountHash, _documentHash, 
+    _riskPoints, _premiumCredited_Cu, _premiumCharged_Cu_Ppt, _state, _lastReconciliationDay, _nextReconciliationDay) 
 {
     // If a parameter has been provided verify it matches _pData
-    if (_policyIdx != null) assert.equal(_pData[0].valueOf(), _policyIdx, 'Policy index specifid is invalid');
-    if (_policyOwnerAdr != null) assert.equal(_pData[1].valueOf(), _policyOwnerAdr, 'Policy onwer specifid is invalid');
+    if (_idx != null) assert.equal(_pData[0].valueOf(), _idx, 'Policy index specifid is invalid');
+    if (_owner != null) assert.equal(_pData[1].valueOf(), _owner, 'Policy onwer specifid is invalid');
     if (_paymentAccountHash != null) assert.equal(_pData[2].valueOf(), _paymentAccountHash, 'Payment account hash specifid is invalid');
-    if (_policyDocumentHash != null) assert.equal(_pData[3].valueOf(), _policyDocumentHash, 'Document hash specifid is invalid');
-    if (_policyRiskPoints != null) assert.equal(_pData[4].valueOf(), _policyRiskPoints, 'Risk points specifid is invalid');
-    if (_premiumCredited_Fc != null) assert.equal(_pData[5].valueOf(), _premiumCredited_Fc, 'Credited amount specifid is invalid');
-    if (_premiumCharged_Fc_Ppt != null) assert.equal(_pData[6].valueOf(), _premiumCharged_Fc_Ppt, 'Premium charged amount is invalid');
+    if (_documentHash != null) assert.equal(_pData[3].valueOf(), _documentHash, 'Document hash specifid is invalid');
+    if (_riskPoints != null) assert.equal(_pData[4].valueOf(), _riskPoints, 'Risk points specifid is invalid');
+    if (_premiumCredited_Cu != null) assert.equal(_pData[5].valueOf(), _premiumCredited_Cu, 'Credited amount specifid is invalid');
+    if (_premiumCharged_Cu_Ppt != null) assert.equal(_pData[6].valueOf(), _premiumCharged_Cu_Ppt, 'Premium charged amount is invalid');
     if (_state != null) assert.equal(_pData[7].valueOf(), _state, 'Policy state specifid is invalid');
     if (_lastReconciliationDay != null) assert.equal(_pData[8].valueOf(), _lastReconciliationDay, 'Last reconciliation day is invalid');
     if (_nextReconciliationDay != null) assert.equal(_pData[9].valueOf(), _nextReconciliationDay, 'Next reconciliation day is invalid');
@@ -328,12 +338,12 @@ exports.verifyPolicyData = function(_pData, _policyIdx, _policyOwnerAdr, _paymen
 }
 
 // Function verifies if the data in _aData matches the other parameter if they are provided
-exports.verifyAdjustorData = function(_aData, _adjustorIdx, _adjustorAdr, _settlementApprovalAmount_Fc, _policyRiskPointLimit, _serviceAgreement) 
+exports.verifyAdjustorData = function(_aData, _idx, _owner, _settlementApprovalAmount_Cu, _policyRiskPointLimit, _serviceAgreement) 
 {
     // If a parameter has been provided verify it matches _bData
-    if (_adjustorIdx != null) assert.equal(_aData[0].valueOf(), _adjustorIdx, 'Adjustor index specified is invalid');
-    if (_adjustorAdr != null) assert.equal(_aData[1].valueOf(), _adjustorAdr, 'Adjustor address specified is invalid');
-    if (_settlementApprovalAmount_Fc != null) assert.equal(_aData[2].valueOf(), _settlementApprovalAmount_Fc, 'Settlement approval amount specified is invalid');
+    if (_idx != null) assert.equal(_aData[0].valueOf(), _idx, 'Adjustor index specified is invalid');
+    if (_owner != null) assert.equal(_aData[1].valueOf(), _owner, 'Adjustor address specified is invalid');
+    if (_settlementApprovalAmount_Cu != null) assert.equal(_aData[2].valueOf(), _settlementApprovalAmount_Cu, 'Settlement approval amount specified is invalid');
     if (_policyRiskPointLimit != null) assert.equal(_aData[3].valueOf(), _policyRiskPointLimit, 'Policy risk point limit specified is invalid');
     if (_serviceAgreement != null) assert.equal(_aData[4].valueOf(), _serviceAgreement, 'Adjustor service agreement specified is invalid');
     // Return dummy value to be awaited
@@ -341,11 +351,11 @@ exports.verifyAdjustorData = function(_aData, _adjustorIdx, _adjustorAdr, _settl
 }
 
 // Function verifies if the data in _sData matches the other parameter if they are provided
-exports.verifySettlementData = function(_sData, _settlementIdx, _settlementAmount_Fc, _state) 
+exports.verifySettlementData = function(_sData, _idx, _settlementAmount_Cu, _state) 
 {
     // If a parameter has been provided verify it matches _bData
-    if (_settlementIdx != null) assert.equal(_sData[0].valueOf(), _settlementIdx, 'Settlement index specified is invalid');
-    if (_settlementAmount_Fc != null) assert.equal(_sData[1].valueOf(), _settlementAmount_Fc, 'Settlement amount specified is invalid');
+    if (_idx != null) assert.equal(_sData[0].valueOf(), _idx, 'Settlement index specified is invalid');
+    if (_settlementAmount_Cu != null) assert.equal(_sData[1].valueOf(), _settlementAmount_Cu, 'Settlement amount specified is invalid');
     if (_state != null) assert.equal(_sData[2].valueOf(), _state, 'State specified is invalid');
     // Return dummy value to be awaited
     return 0;

@@ -26,11 +26,14 @@ contract Bank is IntAccessI, ExtAccessI {
     // Array to store the payment advice instructions
     PaymentAdvice[] public bankPaymentAdvice;
 
+    // Index pointing to the last payment advice entry in the PaymentAdvice array
+    uint public countPaymentAdviceEntries = 0;
+
     // Mapping to store the unique bank transaction reference numbers to avoid double processing
     mapping(uint => bool) public bankTransactionIdxProcessed;
 
     // Expense tracking variable for the last 24 hours
-    uint public fundingAccountPaymentsTracking = 0;
+    uint public fundingAccountPaymentsTracking_Cu = 0;
 
     // Transaction log entries for all bank transactions
     event LogBank(bytes32 indexed internalReferenceHash, uint indexed accountType, bool indexed success,
@@ -43,7 +46,7 @@ contract Bank is IntAccessI, ExtAccessI {
     function Bank(address _trustAdr) IntAccessI(_trustAdr) ExtAccessI(msg.sender) public {
     }
 
-    /**@dev Resets the fundingAccountPaymentsTracking varialbe to 0
+    /**@dev Resets the fundingAccountPaymentsTracking_Cu varialbe to 0
      * @return The total amount of expenses from the Funding Account since last processing.
      */
     function getResetFundingAccountPaymentsTracking()
@@ -52,9 +55,9 @@ contract Bank is IntAccessI, ExtAccessI {
         returns (uint)
     {
         // Save the value for the return
-        uint payments = fundingAccountPaymentsTracking;
+        uint payments = fundingAccountPaymentsTracking_Cu;
         // Reset fundingAccountPaymentsToday to start from 0
-        fundingAccountPaymentsTracking = 0;
+        fundingAccountPaymentsTracking_Cu = 0;
         // return payments today value
         return payments;
     }
@@ -63,20 +66,20 @@ contract Bank is IntAccessI, ExtAccessI {
      * @param _adviceType The type of payment to be performed
      * @param _paymentAccountHashRecipient The account hash of the party RECEIVING the funds
      * @param _paymentSubject Payment particular/code/reference to be specified for the bank transaction
-     * @param _amount_Fc The requested amount to be paid.
+     * @param _amount_Cu The requested amount to be paid.
      * @param _internalReferenceHash The hash of the bond, policy, etc. this bank transaction belongs to (used as a reference for logging)
      */
     function createPaymentAdvice(Lib.PaymentAdviceType _adviceType, bytes32 _paymentAccountHashRecipient, 
-        bytes32 _paymentSubject, uint _amount_Fc, bytes32 _internalReferenceHash)
+        bytes32 _paymentSubject, uint _amount_Cu, bytes32 _internalReferenceHash)
         public
         isIntAuth
     {
-        // If it is payment advice instruction from the funding account record it in the fundingAccountPaymentsTracking variable
+        // If it is payment advice instruction from the funding account record it in the fundingAccountPaymentsTracking_Cu variable
         if ((_adviceType == Lib.PaymentAdviceType.ServiceProvider) ||
             (_adviceType == Lib.PaymentAdviceType.Trust) ||
             (_adviceType == Lib.PaymentAdviceType.PoolOperator)) {
             // Add the amount to the fundingAccountPaymentsToday variable
-            fundingAccountPaymentsTracking += _amount_Fc;
+            fundingAccountPaymentsTracking_Cu += _amount_Cu;
         }
 
         // Add payment advice to list
@@ -84,39 +87,12 @@ contract Bank is IntAccessI, ExtAccessI {
             adviceType: _adviceType,
             paymentAccountHashRecipient: _paymentAccountHashRecipient,
             paymentSubject: _paymentSubject,
-            amount: _amount_Fc,
+            amount: _amount_Cu,
             internalReferenceHash: _internalReferenceHash
         }));
-    }
 
-    /**@dev Returns the number of payment advice entries in the array and the index of the first one in the list.
-     * @return Tuple of count (total number of advice in the list) and the index of the first and the last one to be processed.
-     */
-    function paymentAdviceCountNextLast()
-        public
-        constant
-        returns (uint count, uint next, uint last)
-    {
-        count = 0;
-        next = 0;
-        last = 0;
-
-        bool nextSet = false;
-        // Iterate through the array
-        for (uint i=0; i < bankPaymentAdvice.length; i++) {
-            if (bankPaymentAdvice[i].amount > 0) {
-                count++;
-                if (nextSet == false) {
-                    next = i;
-                    nextSet = true;
-                }
-            }
-        }
-        if (bankPaymentAdvice.length == 0)
-            last = 0;
-        else 
-            last = bankPaymentAdvice.length - 1;
-        return (count, next, last);
+        // Increase the number of payment advice entries
+        countPaymentAdviceEntries++;
     }
 
     /**@dev Called by the bank when the specified payment advice has been processed.
@@ -179,6 +155,8 @@ contract Bank is IntAccessI, ExtAccessI {
             }
             // As no entries exist in bankPaymentAdvice array any more, delete the entire array
             delete bankPaymentAdvice;
+            // Reset the number of payment advice entries to 0
+            countPaymentAdviceEntries = 0;
         }
     }
 
@@ -187,11 +165,11 @@ contract Bank is IntAccessI, ExtAccessI {
      * @param _accountType The bank account index of the pool (0-PremiumAccount; 1-BondAccount; 2-FundingAccount)
      * @param _paymentAccountHashSender Hash of the sender's name and bank account number
      * @param _paymentSubject Payment particular/code/reference to be specified for the bank transaction
-     * @param _bankCreditAmount_Fc The amount that has been received at the bank.
+     * @param _bankCreditAmount_Cu The amount that has been received at the bank.
      * @return The result of the Deposit operation. True if successfull, false the bank needs to be transfer the deposit back to the sender.
      */
     function processAccountCredit(uint _bankTransactionIdx, uint _accountType, 
-        bytes32 _paymentAccountHashSender, bytes32 _paymentSubject, uint _bankCreditAmount_Fc)
+        bytes32 _paymentAccountHashSender, bytes32 _paymentSubject, uint _bankCreditAmount_Cu)
         public
         isExtAuth
         returns (bool)
@@ -215,7 +193,7 @@ contract Bank is IntAccessI, ExtAccessI {
         bytes32 internalReferenceHash;
         
         // Process the deposit with the pool
-        (success, info, internalReferenceHash) = Pool(getPoolAdr()).processAccountCredit(Lib.AccountType(_accountType), _paymentAccountHashSender, _paymentSubject, _bankCreditAmount_Fc);
+        (success, info, internalReferenceHash) = Pool(getPoolAdr()).processAccountCredit(Lib.AccountType(_accountType), _paymentAccountHashSender, _paymentSubject, _bankCreditAmount_Cu);
         
         LogBank(
             internalReferenceHash,
@@ -226,7 +204,7 @@ contract Bank is IntAccessI, ExtAccessI {
             info,
             now,
             uint(Lib.TransactionType.Credit),
-            _bankCreditAmount_Fc
+            _bankCreditAmount_Cu
         );
 
         // // If operation was unsuccessfull
@@ -235,7 +213,7 @@ contract Bank is IntAccessI, ExtAccessI {
             LogBank(
                 internalReferenceHash, uint(_accountType), true,
                 _paymentAccountHashSender, _paymentSubject, bytes32("Refund"),
-                uint(now), uint(Lib.TransactionType.Debit), _bankCreditAmount_Fc);
+                uint(now), uint(Lib.TransactionType.Debit), _bankCreditAmount_Cu);
         }
 
         // Return the result of the deposit processing transaction

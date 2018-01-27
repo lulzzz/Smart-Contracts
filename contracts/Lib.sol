@@ -10,7 +10,7 @@ pragma solidity ^0.4.18;
 
 /** @title Library functions used by contracts within this ecosystem.*/
 library Lib {
-
+    
     /**
     * @dev Enum of the diffent Bank accounts held by the pool
     */

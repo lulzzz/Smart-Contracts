@@ -35,7 +35,7 @@ exports.printTrustLogs = function(_subject, _adr, _info) {
             }
             
             var info;
-            if (subject.indexOf("Fc") != -1)
+            if (subject.indexOf("Cu") != -1)
                     info = miscFunc.formatNr(parseInt(logs[i].args.info), true, 18);
             else if ((subject.indexOf("Pp") != -1) || (subject.indexOf("TotalRiskPoints") != -1))
                 info = miscFunc.formatNr(parseInt(logs[i].args.info), false, 18, false, true);
@@ -55,10 +55,10 @@ exports.printTrustLogs = function(_subject, _adr, _info) {
     });
 }
 
-// event LogPool(bytes32 indexed subject, address indexed adr, bytes32 indexed info, uint timestamp);
-exports.printPoolLogs = function(_subject, _adr, _info) {
+//event LogPool(bytes32 indexed subject, uint indexed day, uint indexed value, uint timestamp);
+exports.printPoolLogs = function(_subject, _day, _value) {
     // Print pool transaction log
-    return miscFunc.getEventsPromise(td.pool.LogPool({ subject: _subject, adr: _adr, info: _info }, { fromBlock: blockNumberStart, toBlock: "latest" }))
+    return miscFunc.getEventsPromise(td.pool.LogPool({ subject: _subject, day: _day, value: _value }, { fromBlock: blockNumberStart, toBlock: "latest" }))
     .then(function(logs) {
         var lastPrintedDay = 0;
         console.log('');
@@ -66,31 +66,21 @@ exports.printPoolLogs = function(_subject, _adr, _info) {
         console.log('================================================');
         for (var i=0; i<logs.length; i++){
             var subject = miscFunc.hexToAscii(logs[i].args.subject, 25);
-            var address = ((parseInt(logs[i].args.adr) > (Math.pow(10, 18))) ? logs[i].args.adr : 
-                                miscFunc.formatNr(parseInt(logs[i].args.adr), false, 42, true, false));
+            var day = miscFunc.formatNr(logs[i].args.day.valueOf(), false, 15, false, false);
+            var value;
+            if (subject.indexOf("Cu") != -1)
+                value = miscFunc.formatNr(logs[i].args.value.valueOf(), true, 18);
+            else value = miscFunc.formatNr(logs[i].args.value.valueOf(), false, 18, false, true);
 
-            if (parseInt(logs[i].args.adr) < (Math.pow(10, 18))) {
-                if (parseInt(logs[i].args.adr) != lastPrintedDay) {
-                    if ((parseInt(logs[i].args.adr) > 17000) && (parseInt(logs[i].args.adr) < 20000))
-                        console.log('-------------------------------------------------------------------------------------------------------------------------');
-                    lastPrintedDay = parseInt(logs[i].args.adr);
-                }
+            if (day != lastPrintedDay) {
+                console.log('---------------------------------------------------------------------------------------------------');
+                lastPrintedDay = day;
             }
-            
-            var info;
-            if (subject.indexOf("Fc") != -1)
-                    info = miscFunc.formatNr(parseInt(logs[i].args.info), true, 18);
-            else if ((subject.indexOf("Pp") != -1) || (subject.indexOf("TotalRiskPoints") != -1))
-                info = miscFunc.formatNr(parseInt(logs[i].args.info), false, 18, false, true);
-            else if (parseInt(logs[i].args.info) > (Math.pow(10, 18)))
-                info = miscFunc.getAdrFromBytes32(logs[i].args.info);
-            else info = '                  ';
-
             console.log(
                 miscFunc.getLocalDateStringFromEpoch(logs[i].args.timestamp) + '   ' + 
                 subject + '   ' + 
-                address + '   ' +
-                info
+                day + '   ' +
+                value
             );
         }
         console.log('');
@@ -350,22 +340,22 @@ exports.printSettlementLogs = function(_settlementHash, _adjustorHash, _info) {
 
 exports.getPremiumDay = function(_day) {
     var printStr = miscFunc.formatNr(_day, false, 15, false, false) + "  |  ";
-    return td.policy.premiumPerRiskPoint_Fc_Ppm.call(_day, 0)
+    return td.policy.premiumPerRiskPoint_Cu_Ppm.call(_day, 0)
     .then(function(res) {
         printStr = printStr + miscFunc.formatNr(res.valueOf(), false, 15, false, true);
-        return td.policy.premiumPerRiskPoint_Fc_Ppm.call(_day, 1);
+        return td.policy.premiumPerRiskPoint_Cu_Ppm.call(_day, 1);
     })
     .then(function(res) {
         printStr = printStr + miscFunc.formatNr(res.valueOf(), false, 15, false, true);
-        return td.policy.premiumPerRiskPoint_Fc_Ppm.call(_day, 2);
+        return td.policy.premiumPerRiskPoint_Cu_Ppm.call(_day, 2);
     })
     .then(function(res) {
         printStr = printStr + miscFunc.formatNr(res.valueOf(), false, 15, false, true);
-        return td.policy.premiumPerRiskPoint_Fc_Ppm.call(_day, 3);
+        return td.policy.premiumPerRiskPoint_Cu_Ppm.call(_day, 3);
     })
     .then(function(res) {
         printStr = printStr + miscFunc.formatNr(res.valueOf(), false, 15, false, true);
-        return td.policy.premiumPerRiskPoint_Fc_Ppm.call(_day, 4);
+        return td.policy.premiumPerRiskPoint_Cu_Ppm.call(_day, 4);
     })
     .then(function(res) {
         printStr = printStr + miscFunc.formatNr(res.valueOf(), false, 15, false, true);

@@ -15,37 +15,37 @@ var td = require("../misc/testData.js");
 // event LogPool(bytes32 indexed subject, address indexed adr, bytes32 indexed info, uint timestamp);
 // ----------------
 
-// setWcExpenses(uint _wcExpenses_Fc)
-exports.setWcExpenses = function(_wcExpensesPerDay_Fc) {
-    // Check if a valid number for _wcExpensesPerDay_Fc has been provided
-    if (_wcExpensesPerDay_Fc == null) {
+// setWcExpenses(uint _wcExpenses_Cu)
+exports.setWcExpenses = function(_wcExpensesPerDay_Cu) {
+    // Check if a valid number for _wcExpensesPerDay_Cu has been provided
+    if (_wcExpensesPerDay_Cu == null) {
         // Perform a dummy call so that the function is awaitable
-        return td.pool.WC_Exp_Fc.call()
+        return td.pool.WC_Exp_Cu.call()
         .then(function() {
         });
     }
     else {
         // Calculate the expenses to set wcExpenses to
-        var wcExpenses_Fc = (setupI.DURATION_WC_EXPENSE_HISTORY_DAYS) * _wcExpensesPerDay_Fc;     // 1000.00 per day
+        var wcExpenses_Cu = (setupI.DURATION_WC_EXPENSE_HISTORY_DAYS) * _wcExpensesPerDay_Cu;     // 1000.00 per day
         // Update wc expenses in the pool
-        return td.trust.setWcExpenses(wcExpenses_Fc, {from: td.accounts[0]})
+        return td.trust.setWcExpenses(wcExpenses_Cu, {from: td.accounts[0]})
         .then(function(tx) {
             // Verify the event details for the pool day and wc expenses are correct  
-            assert.equal(td.currentPoolDay, parseInt(miscFunc.eventLog('Pool', tx, 0, 1)), "Current pool day is incorrect");
-            assert.equal(wcExpenses_Fc, parseInt(miscFunc.eventLog('Pool', tx, 0, 2)), "WC Expenses is incorrect");
+            assert.equal(td.currentPoolDay, miscFunc.eventLog('Pool', tx, 0, 1), "Current pool day is incorrect");
+            assert.equal(wcExpenses_Cu, miscFunc.eventLog('Pool', tx, 0, 2), "WC Expenses is incorrect");
             // Verify the new value for wc expenses set in the pool
-            return td.pool.WC_Exp_Fc.call();
+            return td.pool.WC_Exp_Cu.call();
         })
         .then(function(wcExp) {
             // Verify the variables were updated correctly
-            assert.equal(wcExpenses_Fc, wcExp.valueOf(), "WC Expenses is incorrect");
+            assert.equal(wcExpenses_Cu, wcExp.valueOf(), "WC Expenses is incorrect");
             // Verify the overwrite flag is set
             return td.pool.overwriteWcExpenses.call();
         })
         .then(function(overwriteExpenses) {
             assert.isTrue(overwriteExpenses, "Wc overwrite expenses flag needs to be set.");
             // Save the value new value for wcExpense Fc
-            td.wc_exp_fc = wcExpenses_Fc;
+            td.wc_exp_cu = wcExpenses_Cu;
         });
     }
 }
@@ -53,7 +53,7 @@ exports.setWcExpenses = function(_wcExpensesPerDay_Fc) {
 // dailyOvernightProcessing()
 exports.dailyOvernightProcessing = function() {
     // *****************************************************
-    // This test code base has been removed and will be published at a later stage.
+    // This code base has been removed and will be published at a later stage.
     // See release notes for further details.
     // *****************************************************
 }
@@ -81,7 +81,7 @@ exports.acceleratePoolYield = function(_intervals) {
         tempYield = yieldFromPool;
 
         // Accellerate the yield if there is sufficient demand
-        if (td.wc_bond_fc > ((td.wc_exp_fc * 24 * 3600 * setupI.YAC_EXPENSE_THRESHOLD_PPT) / ((setupI.DURATION_WC_EXPENSE_HISTORY_DAYS * 3600) * (Math.pow(10, 3))))) {
+        if (td.wc_bond_cu > ((td.wc_exp_cu * 24 * 3600 * setupI.YAC_EXPENSE_THRESHOLD_PPT) / ((setupI.DURATION_WC_EXPENSE_HISTORY_DAYS * 3600) * (Math.pow(10, 3))))) {
             // Accellerate the yield
             for (var i = 0; i < _intervals; i++) {
                 td.timer.manualPing(td.pool.address, 0, 0x0, td.futureEpochTimeStamp, {from: td.accounts[0]});

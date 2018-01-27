@@ -47,14 +47,14 @@ exports.currentPoolDay = 0;
 exports.totalRiskPoints = 0;
 
 // Bank account balances
-exports.wc_bal_pa_fc = 0;
-exports.wc_bal_ba_fc = 0;
-exports.wc_bal_fa_fc = 0;
+exports.wc_bal_pa_cu = 0;
+exports.wc_bal_ba_cu = 0;
+exports.wc_bal_fa_cu = 0;
 
 // Pool variables
-exports.wc_bond_fc = 0;
+exports.wc_bond_cu = 0;
 exports.b_yield_ppb = 0;
 exports.b_gradient_ppq = 0;
-exports.wc_exp_fc = 0;
-exports.wc_locked_fc = 0
-exports.wc_transit_fc = 0;
+exports.wc_exp_cu = 0;
+exports.wc_locked_cu = 0
+exports.wc_transit_cu = 0;

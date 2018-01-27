@@ -30,16 +30,16 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
     }
 
     // Function combines bond creation and principal deposit
-    function createBondCreditPrincipal(_principal_fc, _bondRefHash, bIdx, bOwnerIdx) {
-        return utBond.createBond(_principal_fc, _bondRefHash, bOwnerIdx)
+    function createBondCreditPrincipal(_principal_cu, _bondRefHash, bIdx, bOwnerIdx) {
+        return utBond.createBond(_principal_cu, _bondRefHash, bOwnerIdx)
         .then(function() { return utBank.bondPrincipalCredit(td.bHash[bIdx]) })
         .then(function() { return 0 });
     }
 
     // Function combines policy creation and credit of the policy premium
-    function createPolicyCreditPremium(_riskPoints, pIdx, aIdx, _premiumAmount_fc) {
+    function createPolicyCreditPremium(_riskPoints, pIdx, aIdx, _premiumAmount_cu) {
         return utPolicy.createPolicy(_riskPoints, pIdx, aIdx)
-        .then(function() { return utBank.policyPremiumCredit(td.pHash[pIdx], _premiumAmount_fc) })
+        .then(function() { return utBank.policyPremiumCredit(td.pHash[pIdx], _premiumAmount_cu) })
         .then(function() { return 0 });
     }
 
@@ -47,7 +47,7 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
     // *** Verify the ecosystem has been initialised correclty and save test data
     // ******************************************************************************
 
-    it("should verify and save the initialisation variables of Pool (This unit test must always be run first!)          ", function() {
+    it("should verify and save the initialization variables of Pool (This unit test must always be run first!)          ", function() {
         return utTrust.verifyDeployedContractsAndInitialiseTestData(accounts).then(function() { });
     });
 
@@ -191,7 +191,7 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
     });
 
     it("should process all outstanding bank payment advice                                                              ", function() {
-        return utBank.processAllOutstandginPaymentAdvice().then(function() { });
+         return utBank.processAllOutstandginPaymentAdvice().then(function() { });
     });
 
     // ******************************************************************************
@@ -276,10 +276,6 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
         return utSettlement.closeSettlement(sIdx, aIdx, miscFunc.getIdxHash(12134), 65500).then(function() { });
     });
 
-    it("should process all outstanding bank payment advice                                                              ", function() {
-        return utBank.processAllOutstandginPaymentAdvice().then(function() { });
-    });
-
     // ******************************************************************************
     // *** Test POLICY AND POOL
     // ******************************************************************************
@@ -348,6 +344,10 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
         return utPolicy.retirePolicy(td.pHash[pIdx], pOwnerIdx).then(function(res) { });
     });
 
+    it("should process all outstanding bank payment advice                                                              ", function() {
+        return utBank.processAllOutstandginPaymentAdvice().then(function() { });
+    });
+
     it("should run all overnight processing tasks                                                                       ", function() {
         return overnightProcessing(100000).then(function() { });
     });
@@ -379,7 +379,8 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
     });
 
     it("should run all overnight processing tasks                                                                       ", function() {
-        return overnightProcessing(100000).then(function() { });
+        return utPool.setWcExpenses(100000)
+        .then(function() { return utPool.dailyOvernightProcessing() });
     });
     
     it("should print                                                                                                    ", function() {
@@ -389,7 +390,7 @@ contract('All Insurance Ecosystem Contracts', function(accounts) {
         // printLogs.printTrustLogs(null, null, null);
         // printLogs.printPolicyLogs(null, null, null);
         
-        // printLogs.printBondLogs(null, null, null);
+        //printLogs.printBondLogs(null, null, null);
         
         // printLogs.printPremiums();
         // printLogs.printBankLogs(null, null, null);

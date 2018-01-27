@@ -18,11 +18,11 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
 
     struct AdjustorData {
         // Index of this Adjustor
-        uint adjustorIdx;
+        uint idx;
         // Access key / password of the Adjustor
-        address adjustorAdr;
+        address owner;
         // The amount this adjustor is authorised to approve without requiring counter signing by another adjustor (can be 0)
-        uint settlementApprovalAmount_Fc;
+        uint settlementApprovalAmount_Cu;
         // The risk point limit this adjustor is authorised to create policies up to (can be 0)
         uint policyRiskPointLimit;
         // The hash of the adjustor's service agreement with the insurance pool
@@ -42,33 +42,34 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
     }
 
     /**@dev Creates an new adjustor with the requested details - can only be called by the Trust
-     * @param _adjustorAdr Address/public key of the adjustor authorising the adjustor to submitt and process settlements
-     * @param _settlementApprovalAmount_Fc The amount this adjustor is authorised to process settlements
+     * @param _owner Address/public key of the adjustor authorising the adjustor to submitt and process settlements. This must be an externally owned account and not a contract address!
+     * @param _settlementApprovalAmount_Cu The amount this adjustor is authorised to process settlements
      * @param _policyRiskPointLimit The risk point limit this adjustor is authorised to underwrite policies
      * @param _serviceAgreementHash The hash of the new service agreement
      */
-    function createAdjustor(address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+    function createAdjustor(address _owner, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
         public
+        isNotContractAdr(_owner)
         isTrustAuth
     {
         // Ensure the adjustor details provided are valid
-        require(_adjustorAdr != 0x0);
+        require(_owner != 0x0);
         // An adjustor needs to be either able to approve settlements or underwrite policies but can potentially also do both
-        require((_settlementApprovalAmount_Fc != 0) || (_policyRiskPointLimit != 0));
+        require((_settlementApprovalAmount_Cu != 0) || (_policyRiskPointLimit != 0));
         // A valid service agreement hash has to be provided
         require(_serviceAgreementHash != 0x0);
 
 		// Create a new Adjustor hash by using random input parameters
-        bytes32 adjustorHash = keccak256(hashMap.nextIdx, address(this), _adjustorAdr);
+        bytes32 adjustorHash = keccak256(hashMap.nextIdx, address(this), _owner);
 
         // Add the adjustor data to the data storage
         dataStorage[adjustorHash] = AdjustorData({
             // Specify the hashMap.nextIdx as the index for this new adjustor
-            adjustorIdx: hashMap.nextIdx,
+            idx: hashMap.nextIdx,
             // Save the address of the adjustor
-            adjustorAdr: _adjustorAdr,
+            owner: _owner,
             // Save the settlement approval amount
-            settlementApprovalAmount_Fc: _settlementApprovalAmount_Fc,
+            settlementApprovalAmount_Cu: _settlementApprovalAmount_Cu,
             // Save the risk point limit
             policyRiskPointLimit: _policyRiskPointLimit,
             // Save the service agreement hash
@@ -79,19 +80,19 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
         hashMap.add(adjustorHash);
 
         // Add log entry to document creation of adjustor
-        LogAdjustor(adjustorHash, _adjustorAdr, bytes32(_settlementApprovalAmount_Fc), now);
-        LogAdjustor(adjustorHash, _adjustorAdr, bytes32(_policyRiskPointLimit), now);
-        LogAdjustor(adjustorHash, _adjustorAdr, _serviceAgreementHash, now);
+        LogAdjustor(adjustorHash, _owner, bytes32(_settlementApprovalAmount_Cu), now);
+        LogAdjustor(adjustorHash, _owner, bytes32(_policyRiskPointLimit), now);
+        LogAdjustor(adjustorHash, _owner, _serviceAgreementHash, now);
     }
 
     /**@dev Updates an adjustor with the requested details - can only be called by the Trust
      * @param _adjustorHash Hash of the adjustor that needs to be updated
-     * @param _adjustorAdr Address/public key of the adjustor authorising the adjustor to submitt and process settlements
-     * @param _settlementApprovalAmount_Fc The amount this adjustor is authorised to process settlements
+     * @param _owner Address/public key of the adjustor authorising the adjustor to submitt and process settlements
+     * @param _settlementApprovalAmount_Cu The amount this adjustor is authorised to process settlements
      * @param _policyRiskPointLimit The risk point limit this adjustor is authorised to underwrite policies
      * @param _serviceAgreementHash The hash of the new service agreement
      */
-    function updateAdjustor(bytes32 _adjustorHash, address _adjustorAdr, uint _settlementApprovalAmount_Fc, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
+    function updateAdjustor(bytes32 _adjustorHash, address _owner, uint _settlementApprovalAmount_Cu, uint _policyRiskPointLimit, bytes32 _serviceAgreementHash)
         public
         isTrustAuth
     {
@@ -99,22 +100,22 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
         require(hashMap.isActive(_adjustorHash) == true);
 
         // Ensure the adjustor details provided are valid
-        require(_adjustorAdr != 0x0);
+        require(_owner != 0x0);
         // An adjustor needs to be either able to approve settlements or underwrite policies but can potentially also do both
-        require((_settlementApprovalAmount_Fc != 0) || (_policyRiskPointLimit != 0));
+        require((_settlementApprovalAmount_Cu != 0) || (_policyRiskPointLimit != 0));
         // A valid service agreement hash has to be provided
         require(_serviceAgreementHash != 0x0);
 
         // Upate the adjustor data
-        dataStorage[_adjustorHash].adjustorAdr = _adjustorAdr;
-        dataStorage[_adjustorHash].settlementApprovalAmount_Fc = _settlementApprovalAmount_Fc;
+        dataStorage[_adjustorHash].owner = _owner;
+        dataStorage[_adjustorHash].settlementApprovalAmount_Cu = _settlementApprovalAmount_Cu;
         dataStorage[_adjustorHash].policyRiskPointLimit = _policyRiskPointLimit;
         dataStorage[_adjustorHash].serviceAgreementHash = _serviceAgreementHash;
 
         // Add log entry to document update of the adjustor
-        LogAdjustor(_adjustorHash, _adjustorAdr, bytes32(_settlementApprovalAmount_Fc), now);
-        LogAdjustor(_adjustorHash, _adjustorAdr, bytes32(_policyRiskPointLimit), now);
-        LogAdjustor(_adjustorHash, _adjustorAdr, _serviceAgreementHash, now);
+        LogAdjustor(_adjustorHash, _owner, bytes32(_settlementApprovalAmount_Cu), now);
+        LogAdjustor(_adjustorHash, _owner, bytes32(_policyRiskPointLimit), now);
+        LogAdjustor(_adjustorHash, _owner, _serviceAgreementHash, now);
     }
 
     /**@dev Retires an adjustor
@@ -128,9 +129,9 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
         require(hashMap.isActive(_adjustorHash) == true);
 
         // Upate the adjustor data
-        dataStorage[_adjustorHash].adjustorAdr = 0x0;
+        dataStorage[_adjustorHash].owner = 0x0;
         dataStorage[_adjustorHash].policyRiskPointLimit = 0;
-        dataStorage[_adjustorHash].settlementApprovalAmount_Fc = 0;
+        dataStorage[_adjustorHash].settlementApprovalAmount_Cu = 0;
 
         // Archive the adjustor
         hashMap.archive(_adjustorHash);
@@ -152,8 +153,8 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
     function isAdjustorSettlementPermissioned(bytes32 _hash, address _adr, uint _approvalAmount) public constant returns (bool) {
         // Adjustor hash needs to be active and provided address needs to match the adjustor's signing address
         // The adjustors settlement approval amount needs to be set and it needs to be greater or equal to the specified approval amount
-        return ((isActive(_hash) == true) && (dataStorage[_hash].adjustorAdr == _adr) && 
-            (dataStorage[_hash].settlementApprovalAmount_Fc > 0) && (dataStorage[_hash].settlementApprovalAmount_Fc >= _approvalAmount));
+        return ((isActive(_hash) == true) && (dataStorage[_hash].owner == _adr) && 
+            (dataStorage[_hash].settlementApprovalAmount_Cu > 0) && (dataStorage[_hash].settlementApprovalAmount_Cu >= _approvalAmount));
     }
 
     /**@dev Verifies if the specified adjustor is authorised to underwrite the requrested policy risk points
@@ -165,7 +166,7 @@ contract Adjustor is SetupI, IntAccessI, HashMapI {
     function isAdjustorPolicyPermissioned(bytes32 _hash, address _adr, uint _policyRiskPoints) public constant returns (bool) {
         // Adjustor hash needs to be active and the provided address needs to match the adjustor's signing address and
         // The adjustors risk point limit needs to be set and the risk points needs to be greater or equal to the specified risk points
-        return ((isActive(_hash) == true) && (dataStorage[_hash].adjustorAdr == _adr) && 
+        return ((isActive(_hash) == true) && (dataStorage[_hash].owner == _adr) && 
             (dataStorage[_hash].policyRiskPointLimit > 0) && (dataStorage[_hash].policyRiskPointLimit >= _policyRiskPoints));
     }
 }

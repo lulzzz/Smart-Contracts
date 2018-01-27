@@ -19,10 +19,10 @@ var utBank = require("../unit-tests/bank.js");
 // function processPaymentAdvice(uint _idx, uint _bankTransactionIdx)
 exports.processPaymentAdvice = function(_idx) {
     // Get the last payment advice entry number
-    return td.bank.paymentAdviceCountNextLast.call()
-    .then(function(paymentAdviceInfo) {
-        // If total number of payment advice entries is 0 or the last payment advice entry is smaller than the requested one
-        if ((paymentAdviceInfo[0].valueOf() == 0) || (paymentAdviceInfo[2].valueOf() < _idx))
+    return td.bank.countPaymentAdviceEntries.call()
+    .then(function(count) {
+        // If total number of payment advice entries is 0
+        if ((count == 0) || (count <= _idx))
             return null;
         else return td.bank.bankPaymentAdvice.call(_idx);
     })
@@ -60,21 +60,21 @@ exports.processPaymentAdvice = function(_idx) {
                                         miscFunc.getBytes32FromAdr(td.pool.address), 
                                         '')
                     .then(function(tx_deposit) {
-                        // Adjust (WC_Bal_BA_Fc, WC_BAL_FA_FC)
+                        // Adjust (WC_Bal_BA_Cu, WC_BAL_FA_CU)
                         if (paymentAdvice[0] == 1)
-                            td.wc_bal_ba_fc = +td.wc_bal_ba_fc + +paymentAdvice[3].valueOf();
-                        else td.wc_bal_fa_fc = +td.wc_bal_fa_fc + +paymentAdvice[3].valueOf();
+                            td.wc_bal_ba_cu = +td.wc_bal_ba_cu + +paymentAdvice[3].valueOf();
+                        else td.wc_bal_fa_cu = +td.wc_bal_fa_cu + +paymentAdvice[3].valueOf();
                         
-                        // Verify if WC_Bal_BA_Fc is correct
-                        return td.pool.WC_Bal_BA_Fc.call();
+                        // Verify if WC_Bal_BA_Cu is correct
+                        return td.pool.WC_Bal_BA_Cu.call();
                     })
                     .then(function(bal) {
-                        assert.equal(td.wc_bal_ba_fc, bal.valueOf(), "Balance for WC_Bal_BA_Fc is invalid");
-                        // Verify if WC_Bal_FA_Fc is correct
-                        return td.pool.WC_Bal_FA_Fc.call();
+                        assert.equal(td.wc_bal_ba_cu, bal.valueOf(), "Balance for WC_Bal_BA_Cu is invalid");
+                        // Verify if WC_Bal_FA_Cu is correct
+                        return td.pool.WC_Bal_FA_Cu.call();
                     })
                     .then(function(bal) {
-                        assert.equal(td.wc_bal_fa_fc, bal.valueOf(), "Balance for WC_Bal_FA_Fc is invalid");
+                        assert.equal(td.wc_bal_fa_cu, bal.valueOf(), "Balance for WC_Bal_FA_Cu is invalid");
                         return true; 
                     });
                 }
@@ -90,37 +90,29 @@ exports.processPaymentAdvice = function(_idx) {
 // function processes all outstanding bank payment advice entries
 exports.processAllOutstandginPaymentAdvice = function() {
     // Get the payment advice details
-    return td.bank.paymentAdviceCountNextLast.call()
-    .then(function(paymentAdviceInfo) {
+    return td.bank.countPaymentAdviceEntries.call()
+    .then(function(count) {
         // If entries exist run the instructions
-        if (paymentAdviceInfo[0].valueOf() > 0) { 
-            // safe the last lastIdx
-            var lastIdx = paymentAdviceInfo[2].valueOf();
+        if (count > 0) {
             // Run up to 10 bank payment advice instructions starting with the first idx
-            var idx = paymentAdviceInfo[1].valueOf();
+            var idx = 0;
             return utBank.processPaymentAdvice(idx)
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
-            .then(function(res) { idx++; if(idx <= lastIdx) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
+            .then(function(res) { idx++; if(idx < count) return utBank.processPaymentAdvice(idx); else return false; })
             .then(function(res) { });
-        }
-        else {
-            // Verify if all 3 values returned count, next and last are 0
-            assert.equal(0, paymentAdviceInfo[0].valueOf(), "Count needs to be 0");
-            assert.equal(0, paymentAdviceInfo[1].valueOf(), "Next needs to be 0");
-            assert.equal(0, paymentAdviceInfo[2].valueOf(), "Last needs to be 0");
         }
     });
 }
 
-// function processAccountCredit(uint _bankTransactionIdx, uint _accountType, bytes32 _paymentAccountHashSender, bytes32 _paymentSubject, uint _bankCreditAmount_Fc)
-exports.processAccountCredit = function(_accountType, _paymentAccountHashSender, _paymentSubject, _bankCreditAmount_Fc, 
+// function processAccountCredit(uint _bankTransactionIdx, uint _accountType, bytes32 _paymentAccountHashSender, bytes32 _paymentSubject, uint _bankCreditAmount_Cu)
+exports.processAccountCredit = function(_accountType, _paymentAccountHashSender, _paymentSubject, _bankCreditAmount_Cu, 
     _expectedSuccess, _expectedHash, _expectedInfo) {
     // Variable to store the transaction result to return
     var transactionResult;
@@ -129,7 +121,7 @@ exports.processAccountCredit = function(_accountType, _paymentAccountHashSender,
 
     // Process the deposit
     return td.bank.processAccountCredit(td.bankTransactionIdx, _accountType, _paymentAccountHashSender, _paymentSubject, 
-        _bankCreditAmount_Fc, {from: td.accounts[0]})
+        _bankCreditAmount_Cu, {from: td.accounts[0]})
     .then(function(tx) {
         // Set the transaction result (with the events)
         transactionResult = tx;
@@ -152,7 +144,7 @@ exports.processAccountCredit = function(_accountType, _paymentAccountHashSender,
         assert.equal(_paymentSubject, miscFunc.eventLog('Bank', tx, eventIdx, 4), "Bank payment subject is invalid");
         assert.isTrue(miscFunc.eventLog('Bank', tx, eventIdx, 5).indexOf(_expectedInfo) != -1, "Bank payment info is invalid");
         assert.equal(0, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 7)), "Bank credit/debit (transaction type) is invalid");
-        assert.equal(_bankCreditAmount_Fc, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 8)), "Bank deposit amount is invalid");
+        assert.equal(_bankCreditAmount_Cu, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 8)), "Bank deposit amount is invalid");
 
         if (_expectedSuccess == false) {
             // Increase the event Idx
@@ -165,7 +157,7 @@ exports.processAccountCredit = function(_accountType, _paymentAccountHashSender,
             assert.equal(_paymentSubject, miscFunc.eventLog('Bank', tx, eventIdx, 4), "Bank payment subject is invalid");
             assert.isTrue(miscFunc.eventLog('Bank', tx, eventIdx, 5).indexOf('Refund') != -1, "Bank payment info is invalid");
             assert.equal(1, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 7)), "Bank credit/debit (transaction type) is invalid");
-            assert.equal(_bankCreditAmount_Fc, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 8)), "Bank deposit amount is invalid");
+            assert.equal(_bankCreditAmount_Cu, parseInt(miscFunc.eventLog('Bank', tx, eventIdx, 8)), "Bank deposit amount is invalid");
         }
         // Verify the transaction idx flag is set
         return td.bank.bankTransactionIdxProcessed.call(td.bankTransactionIdx);
@@ -210,8 +202,8 @@ exports.bondPrincipalCredit = function(_bondHash) {
             // Calculate the final and expected pool yield
             td.b_yield_ppb = Math.max(setupI.MIN_YIELD_PPB, +td.b_yield_ppb - (2 * +yieldAvg));
 
-            // Adjust wc_bond_fc
-            td.wc_bond_fc = +td.wc_bond_fc - +bondPrincipal;
+            // Adjust wc_bond_cu
+            td.wc_bond_cu = +td.wc_bond_cu - +bondPrincipal;
 
             // Check the bond event details
             // event LogBond(bytes32 indexed bondHash, address indexed owner, bytes32 indexed info, uint timestamp, uint state);
@@ -234,8 +226,8 @@ exports.bondPrincipalCredit = function(_bondHash) {
             assert.equal(4, parseInt(miscFunc.eventLog('Bond', tx, eventIdx, 4)), "Bond state is invalid");
             eventIdx++;
 
-            // Reduce WC_Transit_Fc as bond was secured by another bond
-            td.wc_transit_fc = +td.wc_transit_fc - +bondPrincipal;
+            // Reduce WC_Transit_Cu as bond was secured by another bond
+            td.wc_transit_cu = +td.wc_transit_cu - +bondPrincipal;
 
             // Safe the final bond yield
             finalBondYield = initialBondData[4].valueOf();
@@ -244,8 +236,8 @@ exports.bondPrincipalCredit = function(_bondHash) {
         // Verify the bond event log of the issued log
         assert.equal(4, parseInt(miscFunc.eventLog('Bond', tx, eventIdx, 4)), "Bond state is invalid");
 
-        // Adjust WC_Bal_FA_Fc
-        td.wc_bal_fa_fc = +td.wc_bal_fa_fc + +bondPrincipal;
+        // Adjust WC_Bal_FA_Cu
+        td.wc_bal_fa_cu = +td.wc_bal_fa_cu + +bondPrincipal;
 
         // Calculate the maturity payout amount
         maturityPayoutAmount = +bondPrincipal + Math.floor(+bondPrincipal * +finalBondYield / Math.pow(10, 9));
@@ -267,17 +259,17 @@ exports.bondPrincipalCredit = function(_bondHash) {
             null, null, finalBondYield, maturityPayoutAmount, null, null, null, 4, 0x0);
     })
     .then(function() {
-        // Verify the new balance for wc_bal_fa_fc in pool is valid
-        return td.pool.WC_Bal_FA_Fc.call();
+        // Verify the new balance for wc_bal_fa_cu in pool is valid
+        return td.pool.WC_Bal_FA_Cu.call();
     })
     .then(function(bal) {
-        assert.equal(td.wc_bal_fa_fc, bal.valueOf(), "WC_BAL_FA_FC in the pool is invalid");
+        assert.equal(td.wc_bal_fa_cu, bal.valueOf(), "WC_BAL_FA_CU in the pool is invalid");
 
         // Verify new value for wc transit
-        return td.pool.WC_Transit_Fc.call();
+        return td.pool.WC_Transit_Cu.call();
     })
     .then(function(wc_transit) {
-        assert.equal(td.wc_transit_fc, wc_transit.valueOf(), "The value for wc transit is incorrect");
+        assert.equal(td.wc_transit_cu, wc_transit.valueOf(), "The value for wc transit is incorrect");
         
         // Get the bond data of the securing bond if applicable (bond was in signed state)
         if (initialBondData[9] == 3)
@@ -295,7 +287,7 @@ exports.bondPrincipalCredit = function(_bondHash) {
 }
 
 // function processes a credit into the Premium account (i.e. a policy credit)
-exports.policyPremiumCredit = function(_policyHash, _amount_fc) {
+exports.policyPremiumCredit = function(_policyHash, _amount_cu) {
     // Save the policy data
     var initialPolicyData;
 
@@ -311,12 +303,12 @@ exports.policyPremiumCredit = function(_policyHash, _amount_fc) {
         td.totalRiskPoints = points.valueOf();
 
         // Process the bank deposit
-        return utBank.processAccountCredit(0, web3.sha3(_policyHash), _policyHash, _amount_fc, true, _policyHash, '');
+        return utBank.processAccountCredit(0, web3.sha3(_policyHash), _policyHash, _amount_cu, true, _policyHash, '');
     })
     .then(function(tx) {
         var eventIdx = 0;
-        // Adjust WC_Bal_PA_Fc
-        td.wc_bal_pa_fc = +td.wc_bal_pa_fc + +_amount_fc;
+        // Adjust WC_Bal_PA_Cu
+        td.wc_bal_pa_cu = +td.wc_bal_pa_cu + +_amount_cu;
         
         // If the policy is in a paused state and this is the first ever credit to this policy
         if ((initialPolicyData[7].valueOf() == 0) &&  (initialPolicyData[5].valueOf() == 0)) {
@@ -352,13 +344,13 @@ exports.policyPremiumCredit = function(_policyHash, _amount_fc) {
         }
 
         // Adjust the premiumDeposited amount
-        initialPolicyData[5] = +initialPolicyData[5].valueOf() + +_amount_fc;
+        initialPolicyData[5] = +initialPolicyData[5].valueOf() + +_amount_cu;
 
-        // Verify the new balance for wc_bal_pa_fc in pool is valid
-        return td.pool.WC_Bal_PA_Fc.call();
+        // Verify the new balance for wc_bal_pa_cu in pool is valid
+        return td.pool.WC_Bal_PA_Cu.call();
     })
     .then(function(bal) {
-        assert.equal(td.wc_bal_pa_fc, bal.valueOf(), "WC_BAL_PA_FC in the pool is invalid");
+        assert.equal(td.wc_bal_pa_cu, bal.valueOf(), "WC_BAL_PA_CU in the pool is invalid");
 
          // Get the policy data after the deposit
          return td.policy.dataStorage.call(_policyHash);
