@@ -12,7 +12,7 @@ Possible examples of insurance pools are:
 * CrossFit Health Insurance
 * Professional Indemnity Insurance for independent contractors
 
-Each insurance pool community is run and operated independently from one another. This model is currency agnostic and can be operated Fiat as well as Crypto currency. Further information and a detailed description of the mathematical functioning of this model can be accessed in this [white paper](https://github.com/HonestInsurance/Resources/blob/master/WhitePaper-HonestInsurance.pdf?raw=true).
+Each insurance pool community is run and operated independently from one another. This model is currency agnostic and can be operated Fiat as well as Crypto currency. Further information and a detailed description of the mathematical functioning of this model can be accessed in this [white paper](https://github.com/HonestInsurance/Resources/blob/master/research/WhitePaper-HonestInsurance.pdf?raw=true).
 
 **Self-Governing**
 
